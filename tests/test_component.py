@@ -5,8 +5,13 @@ from django.test import TestCase
 from django.utils.safestring import mark_safe, SafeString
 
 from django_web_components import component
-from django_web_components.component import AttributeBag, Component, attributes_to_string, merge_attributes, \
-    ComponentTagFormatter
+from django_web_components.component import (
+    AttributeBag,
+    Component,
+    attributes_to_string,
+    merge_attributes,
+    ComponentTagFormatter,
+)
 from django_web_components.templatetags.components import SlotNodeList, SlotNode
 
 
@@ -28,7 +33,7 @@ class ComponentTest(TestCase):
         class DummyComponent(Component):
             template_name = "simple_template.html"
 
-        self.assertEqual(
+        self.assertHTMLEqual(
             DummyComponent().render(
                 {
                     "message": "world",
@@ -109,9 +114,7 @@ class MergeAttributesTest(TestCase):
 
     def test_appends_attributes(self):
         self.assertEqual(
-            merge_attributes(
-                {"foo": "bar"}, {}, {"foo": "baz", "data": "foo"}
-            ),
+            merge_attributes({"foo": "bar"}, {}, {"foo": "baz", "data": "foo"}),
             {"foo": "bar baz", "data": "foo"},
         )
 
@@ -151,9 +154,7 @@ class ExampleComponentsTest(TestCase):
     def test_component_with_inline_tag_and_attributes(self):
         @component.register("hello")
         def dummy(context):
-            return Template("""<div {{ attributes }}>Hello, world!</div>""").render(
-                Context(context)
-            )
+            return Template("""<div {{ attributes }}>Hello, world!</div>""").render(Context(context))
 
         self.assertHTMLEqual(
             Template(
@@ -217,9 +218,7 @@ class ExampleComponentsTest(TestCase):
     def test_component_with_attributes(self):
         @component.register("hello")
         def dummy(context):
-            return Template("""<div {{ attributes }}>Hello, world!</div>""").render(
-                Context(context)
-            )
+            return Template("""<div {{ attributes }}>Hello, world!</div>""").render(Context(context))
 
         self.assertHTMLEqual(
             Template(
@@ -235,9 +234,7 @@ class ExampleComponentsTest(TestCase):
     def test_component_with_empty_attributes(self):
         @component.register("hello")
         def dummy(context):
-            return Template("""<div {{ attributes }}>Hello, world!</div>""").render(
-                Context(context)
-            )
+            return Template("""<div {{ attributes }}>Hello, world!</div>""").render(Context(context))
 
         self.assertHTMLEqual(
             Template(
@@ -441,7 +438,9 @@ class ExampleComponentsTest(TestCase):
                 """
                 {% hello id="123" %}
                     {% slot title class="title" %}Title{% endslot %}
-                    {% slot body class="foo" x-on:click='bar' @click="baz" foo:bar.baz="foo" required %}Body{% endslot %}
+                    {% slot body class="foo" x-on:click='bar' @click="baz" foo:bar.baz="foo" required %}
+                        Body
+                    {% endslot %}
                 {% endhello %}
                 """
             ).render(Context({})),
@@ -647,9 +646,9 @@ class ExampleComponentsTest(TestCase):
             ).render(Context(context))
 
         with self.settings(
-                WEB_COMPONENTS={
-                    "DEFAULT_SLOT_NAME": "default_slot",
-                }
+            WEB_COMPONENTS={
+                "DEFAULT_SLOT_NAME": "default_slot",
+            }
         ):
             self.assertHTMLEqual(
                 Template(
@@ -680,10 +679,11 @@ class ComponentTagFormatterTest(TestCase):
 
     def test_can_change_component_block_tags(self):
         with self.settings(
-                WEB_COMPONENTS={
-                    "DEFAULT_COMPONENT_TAG_FORMATTER": "tests.test_component.CustomComponentTagFormatter",
-                },
+            WEB_COMPONENTS={
+                "DEFAULT_COMPONENT_TAG_FORMATTER": "tests.test_component.CustomComponentTagFormatter",
+            },
         ):
+
             @component.register("hello")
             def dummy(context):
                 return Template("""<div>{% render_slot slots.inner_block %}</div>""").render(Context(context))
@@ -701,10 +701,11 @@ class ComponentTagFormatterTest(TestCase):
 
     def test_can_change_component_inline_tag(self):
         with self.settings(
-                WEB_COMPONENTS={
-                    "DEFAULT_COMPONENT_TAG_FORMATTER": "tests.test_component.CustomComponentTagFormatter",
-                },
+            WEB_COMPONENTS={
+                "DEFAULT_COMPONENT_TAG_FORMATTER": "tests.test_component.CustomComponentTagFormatter",
+            },
         ):
+
             @component.register("hello")
             def dummy(context):
                 return Template("""<div>Hello, world!</div>""").render(Context(context))

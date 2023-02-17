@@ -6,8 +6,14 @@ from django.template import TemplateSyntaxError, NodeList
 from django.template.base import FilterExpression
 from django.utils.regex_helper import _lazy_re_compile
 
-from django_web_components.component import AttributeBag, token_kwargs, render_component, get_component_tag_formatter, \
-    attributes_to_string, merge_attributes
+from django_web_components.component import (
+    AttributeBag,
+    token_kwargs,
+    render_component,
+    get_component_tag_formatter,
+    attributes_to_string,
+    merge_attributes,
+)
 from django_web_components.conf import app_settings
 
 register = template.Library()
@@ -71,9 +77,7 @@ class ComponentNode(template.Node):
                 if isinstance(slot, SlotNode):
                     slot.resolve_attributes(context)
 
-        attributes = AttributeBag({
-            key: value.resolve(context) for key, value in self.attributes.items()
-        })
+        attributes = AttributeBag({key: value.resolve(context) for key, value in self.attributes.items()})
 
         return render_component(
             name=self.name,
@@ -88,9 +92,7 @@ def do_slot(parser, token):
     tag_name, *remaining_bits = token.split_contents()
 
     if len(remaining_bits) < 1:
-        raise TemplateSyntaxError(
-            "'%s' takes at least one argument, the slot name." % tag_name
-        )
+        raise TemplateSyntaxError("'%s' takes at least one argument, the slot name." % tag_name)
 
     slot_name = remaining_bits.pop(0).strip('"')
 
@@ -112,15 +114,10 @@ class SlotNode(template.Node):
         self.attributes = {}
 
     def resolve_attributes(self, context):
-        self.attributes = AttributeBag({
-            key: value.resolve(context)
-            for key, value in self.raw_attributes.items()
-        })
+        self.attributes = AttributeBag({key: value.resolve(context) for key, value in self.raw_attributes.items()})
 
     def render(self, context):
-        attributes = AttributeBag({
-            key: value.resolve(context) for key, value in self.raw_attributes.items()
-        })
+        attributes = AttributeBag({key: value.resolve(context) for key, value in self.raw_attributes.items()})
 
         extra_context = {
             "attributes": attributes,
@@ -142,14 +139,10 @@ class SlotNodeList(NodeList):
 def do_render_slot(parser, token):
     bits = token.split_contents()[1:]
     if not bits:
-        raise TemplateSyntaxError(
-            "'render_slot' statement requires at least one argument"
-        )
+        raise TemplateSyntaxError("'render_slot' statement requires at least one argument")
 
     if len(bits) > 2:
-        raise TemplateSyntaxError(
-            "'render_slot' statement requires at most two arguments"
-        )
+        raise TemplateSyntaxError("'render_slot' statement requires at most two arguments")
 
     values = [parser.compile_filter(bit) for bit in bits]
 
@@ -163,9 +156,7 @@ def do_render_slot(parser, token):
 
 
 class RenderSlotNode(template.Node):
-    def __init__(
-            self, slot: FilterExpression, argument: Union[FilterExpression, None] = None
-    ):
+    def __init__(self, slot: FilterExpression, argument: Union[FilterExpression, None] = None):
         self.slot = slot
         self.argument = argument
 
@@ -182,13 +173,15 @@ class RenderSlotNode(template.Node):
             let = slot.attributes.get("let", None)
             if let and not argument:
                 raise TemplateSyntaxError(
-                    "'let' was defined on the slot but no argument was passed to 'render_slot'"
+                    "'let' was defined on the slot but no argument was passed " "to 'render_slot'"
                 )
 
             if let and argument:
-                with context.update({
-                    let: argument,
-                }):
+                with context.update(
+                    {
+                        let: argument,
+                    }
+                ):
                     return slot.render(context)
 
         return slot.render(context)
@@ -216,9 +209,7 @@ attribute_re = _lazy_re_compile(
 def do_merge_attrs(parser, token):
     bits = token.split_contents()
     if len(bits) < 2:
-        raise TemplateSyntaxError(
-            "'%s' takes at least one argument, the attributes." % bits[0]
-        )
+        raise TemplateSyntaxError("'%s' takes at least one argument, the attributes." % bits[0])
     attributes = parser.compile_filter(bits[1])
     attr_list = bits[2:]
 
@@ -228,8 +219,7 @@ def do_merge_attrs(parser, token):
         match = attribute_re.match(pair)
         if not match:
             raise TemplateSyntaxError(
-                "Malformed arguments to '%s' tag. You must pass the attributes in the form attr=\"value\"."
-                % bits[0]
+                "Malformed arguments to '%s' tag. You must pass the attributes " 'in the form attr="value".' % bits[0]
             )
         dct = match.groupdict()
         attr, sign, value = (
@@ -242,9 +232,7 @@ def do_merge_attrs(parser, token):
         elif sign == "+=":
             append_attrs.append((attr, value))
         else:
-            raise TemplateSyntaxError(
-                "Unknown sign '%s' for attribute '%s'" % (sign, attr)
-            )
+            raise TemplateSyntaxError("Unknown sign '%s' for attribute '%s'" % (sign, attr))
 
     return MergeAttrsNode(attributes, default_attrs, append_attrs)
 
@@ -258,13 +246,9 @@ class MergeAttrsNode(template.Node):
     def render(self, context):
         bound_attributes: dict = self.attributes.resolve(context)
 
-        attribute_defaults = {
-            key: value.resolve(context) for key, value in self.default_attrs
-        }
+        attribute_defaults = {key: value.resolve(context) for key, value in self.default_attrs}
 
-        append_attributes = {
-            key: value.resolve(context) for key, value in self.append_attrs
-        }
+        append_attributes = {key: value.resolve(context) for key, value in self.append_attrs}
 
         attrs = merge_attributes(
             attributes=bound_attributes,

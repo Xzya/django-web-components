@@ -1,6 +1,10 @@
 from django.test import TestCase
 
-from django_web_components.registry import ComponentRegistry, AlreadyRegistered, NotRegistered
+from django_web_components.registry import (
+    ComponentRegistry,
+    AlreadyRegistered,
+    NotRegistered,
+)
 
 
 class ComponentRegistryTest(TestCase):

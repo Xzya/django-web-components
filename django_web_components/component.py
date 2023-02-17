@@ -20,7 +20,10 @@ def register(name: str, target_register: template.Library = None):
     """
     Class decorator to register a component.
     """
-    from django_web_components.templatetags.components import register as tag_register, create_component_tag
+    from django_web_components.templatetags.components import (
+        register as tag_register,
+        create_component_tag,
+    )
 
     if target_register is None:
         target_register = tag_register
@@ -47,9 +50,9 @@ class Component:
     slots: dict
 
     def __init__(
-            self,
-            attributes: "AttributeBag" = None,
-            slots: dict = None,
+        self,
+        attributes: "AttributeBag" = None,
+        slots: dict = None,
     ):
         self.attributes = attributes or AttributeBag()
         self.slots = slots or {}
@@ -60,9 +63,7 @@ class Component:
 
     def get_template_name(self) -> Union[str, list, tuple]:
         if not self.template_name:
-            raise ImproperlyConfigured(
-                f"Template name is not set for Component {self.__class__.__name__}"
-            )
+            raise ImproperlyConfigured(f"Template name is not set for Component {self.__class__.__name__}")
 
         return self.template_name
 
@@ -95,9 +96,7 @@ def attributes_to_string(attributes: dict) -> str:
     return mark_safe(SafeString(" ").join(attr_list))
 
 
-def merge_attributes(
-        attributes: dict, attribute_defaults: dict = None, append_attributes: dict = None
-) -> dict:
+def merge_attributes(attributes: dict, attribute_defaults: dict = None, append_attributes: dict = None) -> dict:
     """
     Merge additional attributes / values into the attribute bag.
     """
@@ -152,7 +151,8 @@ def render_component(*, name: str, attributes: dict, slots: dict, context: templ
 kwarg_re = _lazy_re_compile(r"(?:([\w\-\:\@\.]+)=)?(.+)")
 
 
-# This is the same as the original, but the regex is modified to accept special characters
+# This is the same as the original, but the regex is modified to accept
+# special characters
 def token_kwargs(bits, parser, support_legacy=False):
     """
     Parse token keyword arguments and return a dictionary of the arguments
