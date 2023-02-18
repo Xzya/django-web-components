@@ -5,6 +5,7 @@ from django import template
 from django.template import TemplateSyntaxError, NodeList
 from django.template.base import FilterExpression, Token, Parser
 from django.utils.regex_helper import _lazy_re_compile
+from django.utils.safestring import SafeString
 
 from django_web_components.component import (
     AttributeBag,
@@ -54,7 +55,7 @@ def create_component_tag(component_name: str):
 
         return ComponentNode(
             name=component_name,
-            attributes=raw_attributes,
+            unresolved_attributes=raw_attributes,
             slots=slots,
         )
 
@@ -63,29 +64,47 @@ def create_component_tag(component_name: str):
 
 class ComponentNode(template.Node):
     name: str
-    attributes: dict
+    unresolved_attributes: dict
     slots: dict
 
-    def __init__(self, name: str = None, attributes: dict = None, slots: dict = None):
+    def __init__(self, name: str = None, unresolved_attributes: dict = None, slots: dict = None):
         self.name = name or ""
-        self.attributes = attributes or {}
+        self.unresolved_attributes = unresolved_attributes or {}
         self.slots = slots or {}
 
     def render(self, context):
         # We may need to access the slot's attributes inside the component's template,
         # so we need to resolve them
-        # TODO: is this thread safe?
-        for slot_name, slots in self.slots.items():
-            for slot in slots:
-                if isinstance(slot, SlotNode):
-                    slot.resolve_attributes(context)
+        #
+        # We also clone the SlotNodes to make sure we don't have thread-safety issues since
+        # we are storing the attributes on the node itself
+        slots = {}
+        for slot_name, slot_list in self.slots.items():
+            # initialize the slot
+            if slot_name not in slots:
+                slots[slot_name] = SlotNodeList()
 
-        attributes = AttributeBag({key: value.resolve(context) for key, value in self.attributes.items()})
+            for slot in slot_list:
+                if isinstance(slot, SlotNode):
+                    # clone the SlotNode
+                    cloned_slot = SlotNode(
+                        name=slot.name,
+                        nodelist=slot.nodelist,
+                        unresolved_attributes=slot.unresolved_attributes,
+                    )
+                    # resolve its attributes so that they can be accessed from the component template
+                    cloned_slot.resolve_attributes(context)
+
+                    slots[slot_name].append(cloned_slot)
+                else:
+                    slots[slot_name].append(slot)
+
+        attributes = AttributeBag({key: value.resolve(context) for key, value in self.unresolved_attributes.items()})
 
         return render_component(
             name=self.name,
             attributes=attributes,
-            slots=self.slots,
+            slots=slots,
             context=context,
         )
 
@@ -112,20 +131,23 @@ def do_slot(parser: Parser, token: Token):
 class SlotNode(template.Node):
     name: str
     nodelist: NodeList
-    raw_attributes: dict
+    unresolved_attributes: dict
     attributes: dict
 
-    def __init__(self, name: str = None, nodelist: NodeList = None, attributes: dict = None):
+    def __init__(self, name: str = None, nodelist: NodeList = None, unresolved_attributes: dict = None):
         self.name = name or ""
         self.nodelist = nodelist or NodeList()
-        self.raw_attributes = attributes or {}
-        self.attributes = {}
+        self.unresolved_attributes = unresolved_attributes or {}
+        # Will be set by the ComponentNode
+        self.attributes = AttributeBag()
 
     def resolve_attributes(self, context):
-        self.attributes = AttributeBag({key: value.resolve(context) for key, value in self.raw_attributes.items()})
+        self.attributes = AttributeBag(
+            {key: value.resolve(context) for key, value in self.unresolved_attributes.items()}
+        )
 
     def render(self, context):
-        attributes = AttributeBag({key: value.resolve(context) for key, value in self.raw_attributes.items()})
+        attributes = AttributeBag({key: value.resolve(context) for key, value in self.unresolved_attributes.items()})
 
         extra_context = {
             "attributes": attributes,
@@ -177,11 +199,17 @@ class RenderSlotNode(template.Node):
         if slot is None:
             return ""
 
+        if isinstance(slot, NodeList):
+            return SafeString("".join([self.render_slot(node, argument, context) for node in slot]))
+
+        return self.render_slot(slot, argument, context)
+
+    def render_slot(self, slot, argument, context):
         if isinstance(slot, SlotNode):
-            # TODO: is this thread safe?
-            slot.resolve_attributes(context)
             let = slot.attributes.get("let", None)
 
+            # if we were passed an argument and the let attribute is defined,
+            # add the argument to the context with the new name
             if let and argument:
                 with context.update(
                     {

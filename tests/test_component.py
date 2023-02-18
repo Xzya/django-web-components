@@ -959,7 +959,7 @@ class RenderComponentTest(TestCase):
                         [
                             SlotNode(
                                 name="",
-                                attributes={},
+                                unresolved_attributes={},
                                 nodelist=NodeList(
                                     [
                                         TextNode("Hello, world!"),
@@ -1018,7 +1018,7 @@ class RenderComponentTest(TestCase):
                         [
                             SlotNode(
                                 name="",
-                                attributes={},
+                                unresolved_attributes={},
                                 nodelist=NodeList(
                                     [
                                         TextNode("Hello, world!"),

@@ -23,7 +23,7 @@ class DoComponentTest(TestCase):
 
         self.assertTrue(type(node) == ComponentNode)
         self.assertEqual(node.name, "hello")
-        self.assertEqual(node.attributes, {})
+        self.assertEqual(node.unresolved_attributes, {})
         self.assertEqual(node.slots, {})
 
     def test_interprets_attributes_with_no_value_as_true(self):
@@ -38,7 +38,7 @@ class DoComponentTest(TestCase):
         context = Context()
 
         self.assertEqual(
-            {key: value.resolve(context) for key, value in node.attributes.items()},
+            {key: value.resolve(context) for key, value in node.unresolved_attributes.items()},
             {
                 "required": True,
             },
@@ -66,7 +66,7 @@ class DoSlotTest(TestCase):
         self.assertTrue(type(node) == SlotNode)
         self.assertEqual(node.name, "title")
         self.assertEqual(node.nodelist, NodeList())
-        self.assertEqual(node.attributes, {})
+        self.assertEqual(node.unresolved_attributes, {})
 
     def test_parses_slot_with_quoted_name(self):
         template = Template("""{% slot "title" %}{% endslot %}""")
@@ -84,7 +84,7 @@ class DoSlotTest(TestCase):
         context = Context()
 
         self.assertEqual(
-            {key: value.resolve(context) for key, value in node.raw_attributes.items()},
+            {key: value.resolve(context) for key, value in node.unresolved_attributes.items()},
             {
                 "required": True,
             },
@@ -178,6 +178,21 @@ class DoRenderSlotTest(TestCase):
         )
 
     def test_renders_slot_with_argument(self):
+        slot_node = SlotNode(
+            unresolved_attributes={
+                "let": FilterExpression('"user"', None),
+            },
+            nodelist=NodeList(
+                [
+                    VariableNode(FilterExpression("user.name", None)),
+                ]
+            ),
+        )
+
+        # normally this would be called by the component, but we are rendering
+        # the slot directly in this case
+        slot_node.resolve_attributes(Context())
+
         self.assertHTMLEqual(
             Template(
                 """
@@ -186,15 +201,10 @@ class DoRenderSlotTest(TestCase):
             ).render(
                 Context(
                     {
-                        "inner_block": SlotNode(
-                            attributes={
-                                "let": FilterExpression('"user"', None),
-                            },
-                            nodelist=NodeList(
-                                [
-                                    VariableNode(FilterExpression("user.name", None)),
-                                ]
-                            ),
+                        "inner_block": SlotNodeList(
+                            [
+                                slot_node,
+                            ]
                         ),
                         "arg": {
                             "name": "John Doe",
