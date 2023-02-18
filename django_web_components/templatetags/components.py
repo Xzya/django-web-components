@@ -3,7 +3,7 @@ from typing import Union
 
 from django import template
 from django.template import TemplateSyntaxError, NodeList
-from django.template.base import FilterExpression
+from django.template.base import FilterExpression, Token, Parser
 from django.utils.regex_helper import _lazy_re_compile
 
 from django_web_components.component import (
@@ -19,8 +19,8 @@ from django_web_components.conf import app_settings
 register = template.Library()
 
 
-def create_component_tag(component_name):
-    def do_component(parser, token):
+def create_component_tag(component_name: str):
+    def do_component(parser: Parser, token: Token):
         tag_name, *remaining_bits = token.split_contents()
 
         formatter = get_component_tag_formatter()
@@ -44,7 +44,6 @@ def create_component_tag(component_name):
             else:
                 # non SlotNodes are considered as part of the default slot
                 slot_name = app_settings.DEFAULT_SLOT_NAME
-                # TODO: Should we ignore TextNodes with whitespace?
 
             # initialize the slot
             if slot_name not in slots:
@@ -92,11 +91,11 @@ class ComponentNode(template.Node):
 
 
 @register.tag("slot")
-def do_slot(parser, token):
+def do_slot(parser: Parser, token: Token):
     tag_name, *remaining_bits = token.split_contents()
 
     if len(remaining_bits) < 1:
-        raise TemplateSyntaxError("'%s' takes at least one argument, the slot name." % tag_name)
+        raise TemplateSyntaxError("'%s' tag takes at least one argument, the slot name" % tag_name)
 
     slot_name = remaining_bits.pop(0).strip('"')
 
@@ -145,15 +144,15 @@ class SlotNodeList(NodeList):
 
 
 @register.tag("render_slot")
-def do_render_slot(parser, token):
-    bits = token.split_contents()[1:]
-    if not bits:
-        raise TemplateSyntaxError("'render_slot' statement requires at least one argument")
+def do_render_slot(parser: Parser, token: Token):
+    tag_name, *remaining_bits = token.split_contents()
+    if not remaining_bits:
+        raise TemplateSyntaxError("'%s' tag takes at least one argument, the slot" % tag_name)
 
-    if len(bits) > 2:
-        raise TemplateSyntaxError("'render_slot' statement requires at most two arguments")
+    if len(remaining_bits) > 2:
+        raise TemplateSyntaxError("'%s' tag takes at most two arguments, the slot and the argument" % tag_name)
 
-    values = [parser.compile_filter(bit) for bit in bits]
+    values = [parser.compile_filter(bit) for bit in remaining_bits]
 
     if len(values) == 2:
         [slot, argument] = values
@@ -182,10 +181,6 @@ class RenderSlotNode(template.Node):
             # TODO: is this thread safe?
             slot.resolve_attributes(context)
             let = slot.attributes.get("let", None)
-            if let and not argument:
-                raise TemplateSyntaxError(
-                    "'let' was defined on the slot but no argument was passed " "to 'render_slot'"
-                )
 
             if let and argument:
                 with context.update(
@@ -201,15 +196,15 @@ class RenderSlotNode(template.Node):
 attribute_re = _lazy_re_compile(
     r"""
     (?P<attr>
-        [@\w:_\.-]+
+        [\w\-\:\@\.\_]+
     )
     (?P<sign>
         \+?=
     )
     (?P<value>
-    ['"]? # start quote
-        [^"']*
-    ['"]? # end quote
+        ['"]? # start quote
+            [^"']*
+        ['"]? # end quote
     )
     """,
     re.VERBOSE | re.UNICODE,
@@ -217,12 +212,13 @@ attribute_re = _lazy_re_compile(
 
 
 @register.tag("merge_attrs")
-def do_merge_attrs(parser, token):
-    bits = token.split_contents()
-    if len(bits) < 2:
-        raise TemplateSyntaxError("'%s' takes at least one argument, the attributes." % bits[0])
-    attributes = parser.compile_filter(bits[1])
-    attr_list = bits[2:]
+def do_merge_attrs(parser: Parser, token: Token):
+    tag_name, *remaining_bits = token.split_contents()
+    if not remaining_bits:
+        raise TemplateSyntaxError("'%s' tag takes at least one argument, the attributes" % tag_name)
+
+    attributes = parser.compile_filter(remaining_bits[0])
+    attr_list = remaining_bits[1:]
 
     default_attrs = []
     append_attrs = []
@@ -230,7 +226,7 @@ def do_merge_attrs(parser, token):
         match = attribute_re.match(pair)
         if not match:
             raise TemplateSyntaxError(
-                "Malformed arguments to '%s' tag. You must pass the attributes " 'in the form attr="value".' % bits[0]
+                "Malformed arguments to '%s' tag. You must pass the attributes in the form attr=\"value\"." % tag_name
             )
         dct = match.groupdict()
         attr, sign, value = (

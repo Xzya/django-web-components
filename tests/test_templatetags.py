@@ -2,8 +2,93 @@ from django.template import TemplateSyntaxError, Template, Context, NodeList, No
 from django.template.base import TextNode, FilterExpression, VariableNode
 from django.test import TestCase
 
+from django_web_components import component
 from django_web_components.component import AttributeBag
-from django_web_components.templatetags.components import SlotNode, SlotNodeList
+from django_web_components.conf import app_settings
+from django_web_components.templatetags.components import SlotNode, SlotNodeList, ComponentNode
+
+
+class DoComponentTest(TestCase):
+    def setUp(self) -> None:
+        component.registry.clear()
+
+    def test_parses_component(self):
+        @component.register("hello")
+        def dummy(context):
+            pass
+
+        template = Template("""{% hello %}{% endhello %}""")
+
+        node = template.nodelist[0]
+
+        self.assertTrue(type(node) == ComponentNode)
+        self.assertEqual(node.name, "hello")
+        self.assertEqual(node.attributes, {})
+        self.assertEqual(node.slots, {})
+
+    def test_interprets_attributes_with_no_value_as_true(self):
+        @component.register("hello")
+        def dummy(context):
+            pass
+
+        template = Template("""{% hello required %}{% endhello %}""")
+
+        node = template.nodelist[0]
+
+        context = Context()
+
+        self.assertEqual(
+            {key: value.resolve(context) for key, value in node.attributes.items()},
+            {
+                "required": True,
+            },
+        )
+
+    def test_parses_slots(self):
+        @component.register("hello")
+        def dummy(context):
+            pass
+
+        template = Template("""{% hello %}{% slot title %}{% endslot %}Hello{% endhello %}""")
+
+        node = template.nodelist[0]
+
+        self.assertEqual(len(node.slots["title"]), 1)
+        self.assertEqual(len(node.slots[app_settings.DEFAULT_SLOT_NAME]), 1)
+
+
+class DoSlotTest(TestCase):
+    def test_parses_slot(self):
+        template = Template("""{% slot title %}{% endslot %}""")
+
+        node = template.nodelist[0]
+
+        self.assertTrue(type(node) == SlotNode)
+        self.assertEqual(node.name, "title")
+        self.assertEqual(node.nodelist, NodeList())
+        self.assertEqual(node.attributes, {})
+
+    def test_parses_slot_with_quoted_name(self):
+        template = Template("""{% slot "title" %}{% endslot %}""")
+
+        node = template.nodelist[0]
+
+        self.assertTrue(type(node) == SlotNode)
+        self.assertEqual(node.name, "title")
+
+    def test_interprets_attributes_with_no_value_as_true(self):
+        template = Template("""{% slot title required %}{% endslot %}""")
+
+        node = template.nodelist[0]
+
+        context = Context()
+
+        self.assertEqual(
+            {key: value.resolve(context) for key, value in node.raw_attributes.items()},
+            {
+                "required": True,
+            },
+        )
 
 
 class SlotNodeListTest(TestCase):
@@ -91,24 +176,6 @@ class DoRenderSlotTest(TestCase):
             """
             """,
         )
-
-    def test_raises_if_slot_has_let_attribute_but_missing_argument(self):
-        with self.assertRaises(TemplateSyntaxError):
-            Template(
-                """
-                {% render_slot inner_block %}
-                """
-            ).render(
-                Context(
-                    {
-                        "inner_block": SlotNode(
-                            attributes={
-                                "let": FilterExpression('"user"', None),
-                            },
-                        ),
-                    },
-                )
-            )
 
     def test_renders_slot_with_argument(self):
         self.assertHTMLEqual(

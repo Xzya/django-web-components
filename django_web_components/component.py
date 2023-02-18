@@ -1,3 +1,4 @@
+import re
 from types import FunctionType
 from typing import Union, List
 
@@ -122,7 +123,7 @@ def merge_attributes(attributes: dict, attribute_defaults: dict = None, append_a
     return attrs
 
 
-def render_component(*, name: str, attributes: dict, slots: dict, context: template.Context):
+def render_component(*, name: str, attributes: dict, slots: dict, context: template.Context) -> str:
     """
     Render the component with the given name.
     """
@@ -149,7 +150,18 @@ def render_component(*, name: str, attributes: dict, slots: dict, context: templ
         return component.render(context)
 
 
-kwarg_re = _lazy_re_compile(r"(?:([\w\-\:\@\.]+)=)?(.+)")
+kwarg_re = _lazy_re_compile(
+    r"""
+    (?:
+        (
+            [\w\-\:\@\.\_]+ # attribute name
+        )
+        =
+    )?
+    (.+) # value
+    """,
+    re.VERBOSE,
+)
 
 
 # This is the same as the original, but the regex is modified to accept
@@ -187,15 +199,31 @@ def token_kwargs(bits: List[str], parser: Parser) -> dict:
 
 
 class ComponentTagFormatter:
+    """
+    The default component tag formatter.
+    """
+
     def format_block_start_tag(self, name: str) -> str:
+        """
+        Formats the start tag of a block component.
+        """
         return name
 
     def format_block_end_tag(self, name: str) -> str:
+        """
+        Formats the end tag of a block component.
+        """
         return f"end{name}"
 
     def format_inline_tag(self, name: str) -> str:
+        """
+        Formats the tag of an inline component.
+        """
         return f"#{name}"
 
 
 def get_component_tag_formatter():
+    """
+    Returns an instance of the currently configured component tag formatter.
+    """
     return import_string(app_settings.DEFAULT_COMPONENT_TAG_FORMATTER)()
