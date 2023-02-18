@@ -1,6 +1,6 @@
 from django.core.exceptions import ImproperlyConfigured
-from django.template import Context, Template, NodeList, Node
-from django.template.base import TextNode
+from django.template import Context, Template, NodeList
+from django.template.base import TextNode, Parser
 from django.test import TestCase
 from django.utils.safestring import mark_safe, SafeString
 
@@ -11,6 +11,7 @@ from django_web_components.component import (
     attributes_to_string,
     merge_attributes,
     ComponentTagFormatter,
+    token_kwargs,
 )
 from django_web_components.templatetags.components import SlotNodeList, SlotNode
 
@@ -907,40 +908,6 @@ class RenderSlotTest(TestCase):
         )
 
 
-class SlotNodeListTest(TestCase):
-    def test_attributes_returns_empty_if_no_elements(self):
-        self.assertEqual(
-            SlotNodeList().attributes,
-            AttributeBag(),
-        )
-
-    def test_attributes_returns_empty_if_element_doesnt_have_attributes_property(self):
-        self.assertEqual(
-            SlotNodeList([TextNode("hello")]).attributes,
-            AttributeBag(),
-        )
-
-    def test_attributes_returns_attributes_of_first_element(self):
-        node = Node()
-        node.attributes = {"foo": "bar"}
-
-        self.assertEqual(
-            SlotNodeList([node]).attributes,
-            {"foo": "bar"},
-        )
-
-    def test_attributes_returns_empty_if_multiple_elements(self):
-        node1 = Node()
-        node1.attributes = {"foo": "bar"}
-        node2 = Node()
-        node2.attributes = {"foo": "bar"}
-
-        self.assertEqual(
-            SlotNodeList([node1, node2]).attributes,
-            {},
-        )
-
-
 class RenderComponentTest(TestCase):
     def setUp(self) -> None:
         component.registry.clear()
@@ -1068,4 +1035,44 @@ class RenderComponentTest(TestCase):
                 Hello, world!
             </div>
             """,
+        )
+
+
+class TokenKwargsTest(TestCase):
+    def test_parses_raw_value(self):
+        p = Parser([])
+        context = Context()
+
+        self.assertEqual(
+            {key: value.resolve(context) for key, value in token_kwargs(['foo="bar"'], p).items()},
+            {
+                "foo": "bar",
+            },
+        )
+
+    def test_parses_key_with_symbols(self):
+        p = Parser([])
+        context = Context()
+
+        self.assertEqual(
+            {
+                key: value.resolve(context)
+                for key, value in token_kwargs(['x-on:click="bar"', '@click="bar"', 'foo:bar.baz="bar"'], p).items()
+            },
+            {
+                "x-on:click": "bar",
+                "@click": "bar",
+                "foo:bar.baz": "bar",
+            },
+        )
+
+    def test_parses_variable_value(self):
+        p = Parser([])
+        context = Context({"bar": "baz"})
+
+        self.assertEqual(
+            {key: value.resolve(context) for key, value in token_kwargs(["foo=bar"], p).items()},
+            {
+                "foo": "baz",
+            },
         )

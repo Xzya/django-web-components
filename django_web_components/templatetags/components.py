@@ -63,10 +63,14 @@ def create_component_tag(component_name):
 
 
 class ComponentNode(template.Node):
-    def __init__(self, name, attributes, slots):
-        self.name = name
-        self.attributes = attributes
-        self.slots = slots
+    name: str
+    attributes: dict
+    slots: dict
+
+    def __init__(self, name: str = None, attributes: dict = None, slots: dict = None):
+        self.name = name or ""
+        self.attributes = attributes or {}
+        self.slots = slots or {}
 
     def render(self, context):
         # We may need to access the slot's attributes inside the component's template,
@@ -100,17 +104,22 @@ def do_slot(parser, token):
     all_bits = [bit if "=" in bit else f"{bit}=True" for bit in remaining_bits]
     raw_attributes = token_kwargs(all_bits, parser)
 
-    nodelist = parser.parse(parse_until=["endslot"])
+    nodelist = parser.parse(("endslot",))
     parser.delete_first_token()
 
     return SlotNode(slot_name, nodelist, raw_attributes)
 
 
 class SlotNode(template.Node):
+    name: str
+    nodelist: NodeList
+    raw_attributes: dict
+    attributes: dict
+
     def __init__(self, name: str = None, nodelist: NodeList = None, attributes: dict = None):
         self.name = name or ""
         self.nodelist = nodelist or NodeList()
-        self.raw_attributes = attributes
+        self.raw_attributes = attributes or {}
         self.attributes = {}
 
     def resolve_attributes(self, context):
@@ -170,6 +179,8 @@ class RenderSlotNode(template.Node):
             return ""
 
         if isinstance(slot, SlotNode):
+            # TODO: is this thread safe?
+            slot.resolve_attributes(context)
             let = slot.attributes.get("let", None)
             if let and not argument:
                 raise TemplateSyntaxError(
