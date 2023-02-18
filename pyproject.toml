@@ -1,5 +1,39 @@
-[tool.ruff]
-line-length = 120
+[tool.poetry]
+name = "django-web-components"
+version = "0.0.1"
+description = "Build reusable template components in Django"
+authors = ["Mihail Cristian Dumitru"]
+license = "MIT"
+readme = "README.md"
+homepage = "https://github.com/Xzya/django-web-components"
+repository = "https://github.com/Xzya/django-web-components"
+keywords = ["django", "components"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Web Environment",
+    "Operating System :: OS Independent",
+    "Framework :: Django",
+    "Framework :: Django :: 3.2",
+    "Framework :: Django :: 4.0",
+    "Framework :: Django :: 4.1",
+]
+packages = [{ include = "django_web_components" }]
+include = [
+    "LICENSE",
+]
 
-[tool.black]
-line-length = 120
+[tool.poetry.dependencies]
+python = ">=3.8,<4.0"
+Django = ">=3.2"
+
+[tool.poetry.dev-dependencies]
+black = "^23.1.0"
+ruff = "^0.0.247"
+tox = "^4.4.5"
+pre-commit = "^3.0.4"
+coverage = "^7.1.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
