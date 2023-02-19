@@ -34,6 +34,13 @@ pre-commit = "^3.0.4"
 coverage = "^7.1.0"
 
 
+[tool.ruff]
+line-length = 120
+
+[tool.black]
+line-length = 120
+
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"

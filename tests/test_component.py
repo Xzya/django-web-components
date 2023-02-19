@@ -36,9 +36,11 @@ class ComponentTest(TestCase):
 
         self.assertHTMLEqual(
             DummyComponent().render(
-                {
-                    "message": "world",
-                }
+                Context(
+                    {
+                        "message": "world",
+                    }
+                )
             ),
             """<div>Hello, world!</div>""",
         )

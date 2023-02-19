@@ -72,7 +72,7 @@ class Component:
     def render(self, context) -> str:
         template_name = self.get_template_name()
 
-        return loader.render_to_string(template_name, context)
+        return loader.render_to_string(template_name, context.flatten())
 
 
 class AttributeBag(dict):
