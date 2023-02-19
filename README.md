@@ -237,7 +237,7 @@ class ComponentTagFormatter:
     def format_inline_tag(self, name):
         return name
 
-# inside your settings[component.py](django_web_components%2Fcomponent.py)
+# inside your settings
 WEB_COMPONENTS = {
     "DEFAULT_COMPONENT_TAG_FORMATTER": "path.to.your.ComponentTagFormatter",
 }
@@ -422,7 +422,7 @@ However, this would result in the `dismissible` attribute being included in the 
 
 Ideally we would want the `dismissible` attribute to be separated from the `attributes` since we only want to use it in logic, but not necessarily render it to the component.
 
-To achieve this, you can manipulate the context from your component in order to provide a better API. There are several ways to do this, choose the method that makes the most sense to you, for example:
+To achieve this, you can manipulate the context from your component in order to provide a better API for using the components. There are several ways to do this, choose the method that makes the most sense to you, for example:
 
 - You can override `get_context_data` and remove the `dismissible` attribute from `attributes` and return it in the context instead
 
@@ -476,10 +476,280 @@ Which should result in the correct HTML being rendered:
 
 ## Slots
 
+You will often need to pass additional content to your components via "slots". A `slots` context variable is passed to your components, which consists of a dict with the slot name as the key and the slot as the value. You may then render the slots inside your components using the `render_slot` tag.
+
+### The default slot
+
+To explore this concept, let's imagine we want to pass some content to an `alert` component:
+
+```html
+{% alert %}
+    <strong>Whoops!</strong> Something went wrong!
+{% endalert %}
+```
+
+By default, that content will be made available to your component in the default slot which is called `inner_block`. You can then render this slot using the `render_slot` tag inside your component:
+
+```html
+{% load components %}
+<div class="alert alert-danger">
+    {% render_slot slots.inner_block %}
+</div>
+```
+
+Which should result in the following HTML being rendered:
+
+```html
+<div class="alert alert-danger">
+    <strong>Whoops!</strong> Something went wrong!
+</div>
+```
+
+You may also rename the default slot by specifying it in your settings:
+
+```python
+# inside your settings
+WEB_COMPONENTS = {
+    "DEFAULT_SLOT_NAME": "default_slot",
+}
+```
+
 ### Named slots
+
+Sometimes a component may need to render multiple different slots in different locations within the component. Let's modify our alert component to allow for the injection of a "title" slot:
+
+```html
+{% load components %}
+<div class="alert alert-danger">
+    <span class="alert-title">
+        {% render_slot slots.title %}
+    </span>
+
+    {% render_slot slots.inner_block %}
+</div>
+```
+
+You may define the content of the named slot using the `slot` tag. Any content not within an explicit `slot` tag will be added to the default `inner_block` slot:
+
+```html
+{% load components %}
+{% alert %}
+    {% slot title %} Server error {% endslot %}
+
+    <strong>Whoops!</strong> Something went wrong!
+{% endalert %}
+```
+
+The rendered HTML in this example would be:
+
+```html
+<div class="alert alert-danger">
+    <span class="alert-title">
+        Server error
+    </span>
+
+    <strong>Whoops!</strong> Something went wrong!
+</div>
+```
 
 ### Slot attributes
 
+Similar to the components, you may assign additional attributes to slots:
+
+```html
+{% load components %}
+{% alert %}
+    {% slot title class="font-bold" %} Server error {% endslot %}
+
+    <strong>Whoops!</strong> Something went wrong!
+{% endalert %}
+```
+
+You can then access the `attributes` property of the slot inside your component:
+
+```html
+{% load components %}
+<div class="alert alert-danger">
+    <span {% merge_attrs slots.title.attributes class="alert-title" %}>
+        {% render_slot slots.title %}
+    </span>
+
+    {% render_slot slots.inner_block %}
+</div>
+```
+
+Which will result in the following HTML being rendered:
+
+```html
+<div class="alert alert-danger">
+    <span class="alert-title font-bold">
+        Server error
+    </span>
+
+    <strong>Whoops!</strong> Something went wrong!
+</div>
+```
+
 ### Duplicate named slots
 
+You may define the same named slot multiple times:
+
+```html
+{% unordered_list %}
+  {% slot item %} First item {% endslot %}
+  {% slot item %} Second item {% endslot %}
+  {% slot item %} Third item {% endslot %}
+{% endunordered_list %}
+```
+
+You can then iterate over the slot inside your component:
+
+```html
+<ul>
+    {% for item in slots.item %}
+        <li>{% render_slot item %}</li>
+    {% endfor %}
+</ul>
+```
+
+Which will result in the following HTML:
+
+```html
+<ul>
+    <li>First item</li>
+    <li>Second item</li>
+    <li>Third item</li>
+</ul>
+```
+
 ### Scoped slots
+
+The slot content will also have access to the component's context. To explore this concept, imagine a list component that accepts an `entries` attribute representing a list of things, which it will then iterate over and render the `item` slot for each entry.
+
+```python
+from django_web_components import component
+from django.template import Template
+
+@component.register("unordered_list")
+def unordered_list(context):
+    context["entries"] = context["attributes"].pop("entries", [])
+    return Template(
+        """
+        <ul>
+            {% for entry in entries %}
+                <li>
+                    {% render_slot slots.item %}
+                </li>
+            {% endfor %}
+        </ul>
+        """
+    ).render(context)
+```
+
+We can then render the component as follows:
+
+```html
+{% unordered_list entries=entries %}
+    {% slot item %}
+        I like {{ entry }}!
+    {% endslot %}
+{% endunordered_list %}
+```
+
+In this example, the `entry` variable comes from the component's context. If we assume that `entries = ["apples", "bananas", "cherries"]`, the resulting HTML will be:
+
+```html
+<ul>
+    <li>I like apples!</li>
+    <li>I like bananas!</li>
+    <li>I like cherries!</li>
+</ul>
+```
+
+You may also explicitly pass a second argument to `render_slot`:
+
+```html
+<ul>
+    {% for entry in entries %}
+        <li>
+            <!-- We are passing the `entry` as the second argument to render_slot -->
+            {% render_slot slots.item entry %}
+        </li>
+    {% endfor %}
+</ul>
+```
+
+When invoking the component, you can use the special attribute `:let` to take the value that was passed to `render_slot` and bind it to a variable:
+
+```html
+{% unordered_list entries=entries %}
+    {% slot item :let="fruit" %}
+        I like {{ fruit }}!
+    {% endslot %}
+{% endunordered_list %}
+```
+
+Here is another example with a table component:
+
+```python
+from django_web_components import component
+from django.template import Template
+
+@component.register("table")
+def table(context):
+    context["rows"] = context["attributes"].pop("rows", [])
+    return Template(
+        """
+        <table>
+            <tr>
+                {% for col in slots.column %}
+                    <th>{{ col.attributes.label }}</th>
+                {% endfor %}
+            </tr>
+            {% for row in rows %}
+                <tr>
+                    {% for col in slots.column %}
+                        <td>
+                            {% render_slot col row %}
+                        </td>
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+        </table>
+        """
+    ).render(context)
+```
+
+You can invoke the component like so:
+
+```html
+{% table rows=rows %}
+    {% slot column :let="user" label="Name" %}
+        {{ user.name }}
+    {% endslot %}
+    {% slot column :let="user" label="Age" %}
+        {{ user.age }}
+    {% endslot %}
+{% endtable %}
+```
+
+If we assume that `rows = [{ "name": "Jane", "age": "34" }, { "name": "Bob", "age": "51" }]`, the following HTML will be rendered:
+
+```html
+<table>
+    <tr>
+        <th>Name</th>
+        <th>Age</th>
+    </tr>
+    <tr>
+        <td>Jane</td>
+        <td>34</td>
+    </tr>
+    <tr>
+        <td>Bob</td>
+        <td>51</td>
+    </tr>
+</table>
+```
+
+### Nested slots

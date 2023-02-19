@@ -873,15 +873,15 @@ class RenderSlotTest(TestCase):
             """,
         )
 
-        # using 'let' to define the context variable
+        # using ':let' to define the context variable
         self.assertHTMLEqual(
             Template(
                 """
                 {% table %}
-                    {% slot column let="user" label="Name" %}
+                    {% slot column :let="user" label="Name" %}
                         {{ user.name }}
                     {% endslot %}
-                    {% slot column let="user" label="Age" %}
+                    {% slot column :let="user" label="Age" %}
                         {{ user.age }}
                     {% endslot %}
                 {% endtable %}

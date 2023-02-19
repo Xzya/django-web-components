@@ -180,7 +180,7 @@ class DoRenderSlotTest(TestCase):
     def test_renders_slot_with_argument(self):
         slot_node = SlotNode(
             unresolved_attributes={
-                "let": FilterExpression('"user"', None),
+                ":let": FilterExpression('"user"', None),
             },
             nodelist=NodeList(
                 [

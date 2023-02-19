@@ -205,18 +205,21 @@ class RenderSlotNode(template.Node):
         return self.render_slot(slot, argument, context)
 
     def render_slot(self, slot, argument, context):
+        let = None
         if isinstance(slot, SlotNode):
-            let = slot.attributes.get("let", None)
+            let = slot.attributes.get(":let", None)
+        elif "attributes" in context:
+            let = context["attributes"].get(":let", None)
 
-            # if we were passed an argument and the let attribute is defined,
-            # add the argument to the context with the new name
-            if let and argument:
-                with context.update(
-                    {
-                        let: argument,
-                    }
-                ):
-                    return slot.render(context)
+        # if we were passed an argument and the let attribute is defined,
+        # add the argument to the context with the new name
+        if let and argument:
+            with context.update(
+                {
+                    let: argument,
+                }
+            ):
+                return slot.render(context)
 
         return slot.render(context)
 
