@@ -44,6 +44,51 @@ class DoComponentTest(TestCase):
             },
         )
 
+    def test_adds_non_slot_child_nodes_to_default_slot(self):
+        @component.register("hello")
+        def dummy(context):
+            pass
+
+        template = Template("""{% hello %}Hello{% endhello %}""")
+
+        node = template.nodelist[0]
+
+        self.assertTrue(app_settings.DEFAULT_SLOT_NAME in node.slots)
+
+        default_slot = node.slots[app_settings.DEFAULT_SLOT_NAME][0]
+
+        self.assertEqual(default_slot.name, app_settings.DEFAULT_SLOT_NAME)
+        self.assertEqual(default_slot.unresolved_attributes, {})
+        self.assertEqual(len(default_slot.nodelist), 1)
+        self.assertEqual(default_slot.special, {})
+
+    def test_passes_special_attributes_to_default_slot(self):
+        @component.register("hello")
+        def dummy(context):
+            pass
+
+        template = Template("""{% hello class="foo" :let="user" %}Hello{% endhello %}""")
+
+        node = template.nodelist[0]
+
+        context = Context()
+
+        self.assertEqual(
+            {key: value.resolve(context) for key, value in node.unresolved_attributes.items()},
+            {
+                "class": "foo",
+            },
+        )
+
+        default_slot = node.slots[app_settings.DEFAULT_SLOT_NAME][0]
+
+        self.assertEqual(
+            {key: value.resolve(context) for key, value in default_slot.special.items()},
+            {
+                ":let": "user",
+            },
+        )
+
     def test_parses_slots(self):
         @component.register("hello")
         def dummy(context):
@@ -87,6 +132,26 @@ class DoSlotTest(TestCase):
             {key: value.resolve(context) for key, value in node.unresolved_attributes.items()},
             {
                 "required": True,
+            },
+        )
+
+    def test_splits_special_attributes(self):
+        template = Template("""{% slot title class="foo" :let="user" %}{% endslot %}""")
+
+        node = template.nodelist[0]
+
+        context = Context()
+
+        self.assertEqual(
+            {key: value.resolve(context) for key, value in node.unresolved_attributes.items()},
+            {
+                "class": "foo",
+            },
+        )
+        self.assertEqual(
+            {key: value.resolve(context) for key, value in node.special.items()},
+            {
+                ":let": "user",
             },
         )
 
