@@ -1,6 +1,6 @@
 import re
 from types import FunctionType
-from typing import Union, List
+from typing import Union, List, Tuple
 
 from django import template
 from django.core.exceptions import ImproperlyConfigured
@@ -121,6 +121,23 @@ def merge_attributes(attributes: dict, attribute_defaults: dict = None, append_a
                 attrs[key] = value
 
     return attrs
+
+
+def split_attributes(attributes: dict) -> Tuple[dict, dict]:
+    """
+    Splits the given attributes into "special" attributes (like :let) and normal attributes.
+    """
+    special_attrs = (":let",)
+
+    attrs = {}
+    special = {}
+    for key, value in attributes.items():
+        if key in special_attrs:
+            special[key] = value
+        else:
+            attrs[key] = value
+
+    return special, attrs
 
 
 def render_component(*, name: str, attributes: dict, slots: dict, context: template.Context) -> str:

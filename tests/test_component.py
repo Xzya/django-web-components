@@ -12,6 +12,7 @@ from django_web_components.component import (
     merge_attributes,
     ComponentTagFormatter,
     token_kwargs,
+    split_attributes,
 )
 from django_web_components.templatetags.components import SlotNodeList, SlotNode
 
@@ -1078,3 +1079,14 @@ class TokenKwargsTest(TestCase):
                 "foo": "baz",
             },
         )
+
+
+class SplitAttributesTest(TestCase):
+    def test_returns_normal_attrs(self):
+        self.assertEqual(split_attributes({"foo": "bar"}), ({}, {"foo": "bar"}))
+
+    def test_returns_special_attrs(self):
+        self.assertEqual(split_attributes({":let": "bar"}), ({":let": "bar"}, {}))
+
+    def test_splits_attrs(self):
+        self.assertEqual(split_attributes({":let": "fruit", "foo": "bar"}), ({":let": "fruit"}, {"foo": "bar"}))

@@ -14,6 +14,7 @@ from django_web_components.component import (
     get_component_tag_formatter,
     attributes_to_string,
     merge_attributes,
+    split_attributes,
 )
 from django_web_components.conf import app_settings
 
@@ -36,26 +37,41 @@ def create_component_tag(component_name: str):
         # Bits that are not keyword args are interpreted as `True` values
         all_bits = [bit if "=" in bit else f"{bit}=True" for bit in remaining_bits]
         raw_attributes = token_kwargs(all_bits, parser)
+        special, attrs = split_attributes(raw_attributes)
 
         # process the slots
         slots = {}
+
+        # All child nodes that are not inside a slot will be added to a default slot
+        default_slot_name = app_settings.DEFAULT_SLOT_NAME
+        default_slot = SlotNode(
+            name=default_slot_name,
+            nodelist=NodeList(),
+            unresolved_attributes={},
+            special=special,
+        )
+        slots[default_slot_name] = SlotNodeList()
+
         for node in nodelist:
             if isinstance(node, SlotNode):
                 slot_name = node.name
+
+                # initialize the slot
+                if slot_name not in slots:
+                    slots[slot_name] = SlotNodeList()
+
+                slots[slot_name].append(node)
             else:
-                # non SlotNodes are considered as part of the default slot
-                slot_name = app_settings.DEFAULT_SLOT_NAME
+                # otherwise add the node to the default slot
+                default_slot.nodelist.append(node)
 
-            # initialize the slot
-            if slot_name not in slots:
-                slots[slot_name] = SlotNodeList()
-
-            # add the slot to the component
-            slots[slot_name].append(node)
+        # add the default slot only if it's not empty
+        if len(default_slot.nodelist) > 0:
+            slots[default_slot_name].append(default_slot)
 
         return ComponentNode(
             name=component_name,
-            unresolved_attributes=raw_attributes,
+            unresolved_attributes=attrs,
             slots=slots,
         )
 
@@ -91,6 +107,7 @@ class ComponentNode(template.Node):
                         name=slot.name,
                         nodelist=slot.nodelist,
                         unresolved_attributes=slot.unresolved_attributes,
+                        special=slot.special,
                     )
                     # resolve its attributes so that they can be accessed from the component template
                     cloned_slot.resolve_attributes(context)
@@ -121,11 +138,17 @@ def do_slot(parser: Parser, token: Token):
     # Bits that are not keyword args are interpreted as `True` values
     all_bits = [bit if "=" in bit else f"{bit}=True" for bit in remaining_bits]
     raw_attributes = token_kwargs(all_bits, parser)
+    special, attrs = split_attributes(raw_attributes)
 
     nodelist = parser.parse(("endslot",))
     parser.delete_first_token()
 
-    return SlotNode(slot_name, nodelist, raw_attributes)
+    return SlotNode(
+        name=slot_name,
+        nodelist=nodelist,
+        unresolved_attributes=attrs,
+        special=special,
+    )
 
 
 class SlotNode(template.Node):
@@ -133,11 +156,15 @@ class SlotNode(template.Node):
     nodelist: NodeList
     unresolved_attributes: dict
     attributes: dict
+    special: dict
 
-    def __init__(self, name: str = None, nodelist: NodeList = None, unresolved_attributes: dict = None):
+    def __init__(
+        self, name: str = None, nodelist: NodeList = None, unresolved_attributes: dict = None, special: dict = None
+    ):
         self.name = name or ""
         self.nodelist = nodelist or NodeList()
         self.unresolved_attributes = unresolved_attributes or {}
+        self.special = special or {}
         # Will be set by the ComponentNode
         self.attributes = AttributeBag()
 
@@ -205,21 +232,20 @@ class RenderSlotNode(template.Node):
         return self.render_slot(slot, argument, context)
 
     def render_slot(self, slot, argument, context):
-        let = None
         if isinstance(slot, SlotNode):
-            let = slot.attributes.get(":let", None)
-        elif "attributes" in context:
-            let = context["attributes"].get(":let", None)
+            let = slot.special.get(":let", None)
+            if let:
+                let = let.resolve(context, ignore_failures=True)
 
-        # if we were passed an argument and the let attribute is defined,
-        # add the argument to the context with the new name
-        if let and argument:
-            with context.update(
-                {
-                    let: argument,
-                }
-            ):
-                return slot.render(context)
+            # if we were passed an argument and the :let attribute is defined,
+            # add the argument to the context with the new name
+            if let and argument:
+                with context.update(
+                    {
+                        let: argument,
+                    }
+                ):
+                    return slot.render(context)
 
         return slot.render(context)
 

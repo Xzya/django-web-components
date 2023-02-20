@@ -24,7 +24,7 @@ class DoComponentTest(TestCase):
         self.assertTrue(type(node) == ComponentNode)
         self.assertEqual(node.name, "hello")
         self.assertEqual(node.unresolved_attributes, {})
-        self.assertEqual(node.slots, {})
+        self.assertEqual(node.slots, {app_settings.DEFAULT_SLOT_NAME: NodeList()})
 
     def test_interprets_attributes_with_no_value_as_true(self):
         @component.register("hello")
@@ -179,7 +179,7 @@ class DoRenderSlotTest(TestCase):
 
     def test_renders_slot_with_argument(self):
         slot_node = SlotNode(
-            unresolved_attributes={
+            special={
                 ":let": FilterExpression('"user"', None),
             },
             nodelist=NodeList(
@@ -188,10 +188,6 @@ class DoRenderSlotTest(TestCase):
                 ]
             ),
         )
-
-        # normally this would be called by the component, but we are rendering
-        # the slot directly in this case
-        slot_node.resolve_attributes(Context())
 
         self.assertHTMLEqual(
             Template(

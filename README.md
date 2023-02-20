@@ -638,7 +638,7 @@ def unordered_list(context):
         <ul>
             {% for entry in entries %}
                 <li>
-                    {% render_slot slots.item %}
+                    {% render_slot slots.inner_block %}
                 </li>
             {% endfor %}
         </ul>
@@ -650,9 +650,7 @@ We can then render the component as follows:
 
 ```html
 {% unordered_list entries=entries %}
-    {% slot item %}
-        I like {{ entry }}!
-    {% endslot %}
+    I like {{ entry }}!
 {% endunordered_list %}
 ```
 
@@ -666,6 +664,8 @@ In this example, the `entry` variable comes from the component's context. If we 
 </ul>
 ```
 
+---
+
 You may also explicitly pass a second argument to `render_slot`:
 
 ```html
@@ -673,7 +673,7 @@ You may also explicitly pass a second argument to `render_slot`:
     {% for entry in entries %}
         <li>
             <!-- We are passing the `entry` as the second argument to render_slot -->
-            {% render_slot slots.item entry %}
+            {% render_slot slots.inner_block entry %}
         </li>
     {% endfor %}
 </ul>
@@ -682,14 +682,16 @@ You may also explicitly pass a second argument to `render_slot`:
 When invoking the component, you can use the special attribute `:let` to take the value that was passed to `render_slot` and bind it to a variable:
 
 ```html
-{% unordered_list entries=entries %}
-    {% slot item :let="fruit" %}
-        I like {{ fruit }}!
-    {% endslot %}
+{% unordered_list :let="fruit" entries=entries %}
+    I like {{ fruit }}!
 {% endunordered_list %}
 ```
 
-Here is another example with a table component:
+This would render the same HTML as above.
+
+---
+
+Here is another example of a table component that uses scoped slots and slot attributes:
 
 ```python
 from django_web_components import component
