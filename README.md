@@ -283,7 +283,7 @@ You may also render all attributes directly using `{{ attributes }}`, for exampl
 You may render all attributes using
 
 ```html
-<div {{ attributes }}">
+<div {{ attributes }}>
     <!-- Component content -->
 </div>
 ```
@@ -510,7 +510,7 @@ You may also rename the default slot by specifying it in your settings:
 ```python
 # inside your settings
 WEB_COMPONENTS = {
-    "DEFAULT_SLOT_NAME": "default_slot",
+    "DEFAULT_SLOT_NAME": "inner_block",
 }
 ```
 
@@ -545,44 +545,6 @@ The rendered HTML in this example would be:
 ```html
 <div class="alert alert-danger">
     <span class="alert-title">
-        Server error
-    </span>
-
-    <strong>Whoops!</strong> Something went wrong!
-</div>
-```
-
-### Slot attributes
-
-Similar to the components, you may assign additional attributes to slots:
-
-```html
-{% load components %}
-{% alert %}
-    {% slot title class="font-bold" %} Server error {% endslot %}
-
-    <strong>Whoops!</strong> Something went wrong!
-{% endalert %}
-```
-
-You can then access the `attributes` property of the slot inside your component:
-
-```html
-{% load components %}
-<div class="alert alert-danger">
-    <span {% merge_attrs slots.title.attributes class="alert-title" %}>
-        {% render_slot slots.title %}
-    </span>
-
-    {% render_slot slots.inner_block %}
-</div>
-```
-
-Which will result in the following HTML being rendered:
-
-```html
-<div class="alert alert-danger">
-    <span class="alert-title font-bold">
         Server error
     </span>
 
@@ -689,9 +651,9 @@ When invoking the component, you can use the special attribute `:let` to take th
 
 This would render the same HTML as above.
 
----
+### Slot attributes
 
-Here is another example of a table component that uses scoped slots and slot attributes:
+Similar to the components, you may assign additional attributes to slots. Below is a table component illustrating multiple named slots with attributes:
 
 ```python
 from django_web_components import component
