@@ -807,3 +807,25 @@ You can then use them as follows:
 
 {% endaccordion %}
 ```
+
+## Setup for development and running the tests
+
+We are using `poetry` to manage the project's dependencies. Check out the documentation on how to install poetry here: https://python-poetry.org/docs/#installation
+
+Install the dependencies
+
+```bash
+poetry install
+```
+
+Activate the environment
+
+```bash
+poetry shell
+```
+
+Now you can run the tests
+
+```bash
+python runtests.py
+```
