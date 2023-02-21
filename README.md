@@ -2,7 +2,7 @@
 
 A simple way to create reusable template components in Django.
 
-## Example component
+## Example
 
 You have to first register your component
 
@@ -41,8 +41,8 @@ You can now render this component with:
 {% load components %}
 
 {% card %}
-  {% slot header %}Featured{% endslot %}
-  {% slot title %}Card title{% endslot %}
+  {% slot header %} Featured {% endslot %}
+  {% slot title %} Card title {% endslot %}
 
   <p>Some quick example text to build on the card title and make up the bulk of the card's content.</p>
 
@@ -53,7 +53,6 @@ You can now render this component with:
 Which will result in the following HTML being rendered:
 
 ```html
-
 <div class="card">
     <div class="card-header">
         Featured
@@ -177,6 +176,8 @@ def card(context):
     ).render(context)
 ```
 
+The examples in this guide will mostly use function based components, since it's easier to exemplify as the component code and template are in the same place, but you are free to choose whichever method you prefer.
+
 ## Registering your components
 
 [Just like signals](https://docs.djangoproject.com/en/dev/topics/signals/#connecting-receiver-functions), the components can live anywhere, but you need to make sure Django picks them up on startup. The easiest way to do this is to define your components in a `components.py` submodule of the application they relate to, and then connect them inside the `ready()` method of your application configuration class.
@@ -248,8 +249,8 @@ WEB_COMPONENTS = {
 You may pass data to components using keyword arguments, which accept either hardcoded values or variables:
 
 ```html
-{% with message="Something bad happened!" %}
-    {% #alert type="error" message=message %}
+{% with error_message="Something bad happened!" %}
+    {% #alert type="error" message=error_message %}
 {% endwith %}
 ```
 
@@ -274,7 +275,7 @@ You can then access it from your component's template:
 
 ### Rendering all attributes
 
-You may also render all attributes directly using `{{ attributes }}`, for example, if you have the following component
+You may also render all attributes directly using `{{ attributes }}`. For example, if you have the following component
 
 ```html
 {% alert id="alerts" class="font-bold" %} ... {% endalert %}
@@ -395,7 +396,7 @@ The rendered HTML will be:
 By default, all attributes are added to an `attributes` dict inside the context. However, this may not always be what we want. For example, imagine we want to have an `alert` component that can be dismissed, while at the same time being able to pass extra attributes to the root element, like an `id` or `class`. Ideally we would want to be able to render a component like this:
 
 ```html
-{% alert id="alerts" dismissible=True %} Something went wrong! {% endalert %}
+{% alert id="alerts" dismissible %} Something went wrong! {% endalert %}
 ```
 
 A naive way to implement this component would be something like the following:
@@ -505,6 +506,8 @@ Which should result in the following HTML being rendered:
 </div>
 ```
 
+---
+
 You may also rename the default slot by specifying it in your settings:
 
 ```python
@@ -586,7 +589,7 @@ Which will result in the following HTML:
 
 ### Scoped slots
 
-The slot content will also have access to the component's context. To explore this concept, imagine a list component that accepts an `entries` attribute representing a list of things, which it will then iterate over and render the `item` slot for each entry.
+The slot content will also have access to the component's context. To explore this concept, imagine a list component that accepts an `entries` attribute representing a list of things, which it will then iterate over and render the `inner_block` slot for each entry.
 
 ```python
 from django_web_components import component
@@ -716,4 +719,91 @@ If we assume that `rows = [{ "name": "Jane", "age": "34" }, { "name": "Bob", "ag
 </table>
 ```
 
-### Nested slots
+### Nested components
+
+You may also nest components to achieve more complicated elements. Here is an example of how you might implement an [Accordion component using Bootstrap](https://getbootstrap.com/docs/5.3/components/accordion/):
+
+```python
+from django_web_components import component
+from django.template import Template
+import uuid
+
+@component.register("accordion")
+def accordion(context):
+    context["accordion_id"] = context["attributes"].pop("id", str(uuid.uuid4()))
+    context["always_open"] = context["attributes"].pop("always_open", False)
+
+    return Template(
+        """
+        <div class="accordion" id="{{ accordion_id }}">
+            {% render_slot slots.inner_block %}
+        </div>
+        """,
+    ).render(context)
+
+
+@component.register("accordion_item")
+def accordion_item(context):
+    context["id"] = context["attributes"].pop("id", str(uuid.uuid4()))
+    context["open"] = context["attributes"].pop("open", False)
+
+    return Template(
+        """
+        <div class="accordion-item" id="{{ id }}">
+            <h2 class="accordion-header" id="{{ id }}-header">
+                <button
+                    class="accordion-button {% if not open %}collapsed{% endif %}"
+                    type="button"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#{{ id }}-collapse"
+                    aria-expanded="{% if open %}true{% else %}false{% endif %}"
+                    aria-controls="{{ id }}-collapse"
+                >
+                    {% render_slot slots.title %}
+                </button>
+            </h2>
+            <div
+                id="{{ id }}-collapse"
+                class="accordion-collapse collapse {% if open %}show{% endif %}"
+                aria-labelledby="{{ id }}-header"
+                {% if accordion_id and not always_open %}
+                    data-bs-parent="#{{ accordion_id }}"
+                {% endif %}}
+            >
+                <div class="accordion-body">
+                    {% render_slot slots.body %}
+                </div>
+            </div>
+        </div>
+        """,
+    ).render(context)
+```
+
+You can then use them as follows:
+
+```html
+{% accordion %}
+
+    {% accordion_item open %}
+        {% slot title %} Accordion Item #1 {% endslot %}
+        {% slot body %}
+            <strong>This is the first item's accordion body.</strong> It is shown by default.
+        {% endslot %}
+    {% endaccordion_item %}
+
+    {% accordion_item %}
+        {% slot title %} Accordion Item #2 {% endslot %}
+        {% slot body %}
+            <strong>This is the second item's accordion body.</strong> It is hidden by default.
+        {% endslot %}
+    {% endaccordion_item %}
+
+    {% accordion_item %}
+        {% slot title %} Accordion Item #3 {% endslot %}
+        {% slot body %}
+            <strong>This is the third item's accordion body.</strong> It is hidden by default.
+        {% endslot %}
+    {% endaccordion_item %}
+
+{% endaccordion %}
+```
