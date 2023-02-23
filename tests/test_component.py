@@ -142,7 +142,7 @@ class ExampleComponentsTest(TestCase):
     def test_component_with_inline_tag(self):
         @component.register("hello")
         def dummy(context):
-            return Template("""<div>Hello, world!</div>""").render(Context(context))
+            return Template("""<div>Hello, world!</div>""").render(context)
 
         self.assertHTMLEqual(
             Template(
@@ -158,7 +158,7 @@ class ExampleComponentsTest(TestCase):
     def test_component_with_inline_tag_and_attributes(self):
         @component.register("hello")
         def dummy(context):
-            return Template("""<div {{ attributes }}>Hello, world!</div>""").render(Context(context))
+            return Template("""<div {{ attributes }}>Hello, world!</div>""").render(context)
 
         self.assertHTMLEqual(
             Template(
@@ -174,7 +174,7 @@ class ExampleComponentsTest(TestCase):
     def test_simple_component(self):
         @component.register("hello")
         def dummy(context):
-            return Template("""<div>Hello, world!</div>""").render(Context(context))
+            return Template("""<div>Hello, world!</div>""").render(context)
 
         self.assertHTMLEqual(
             Template(
@@ -190,7 +190,7 @@ class ExampleComponentsTest(TestCase):
     def test_component_with_name_with_colon(self):
         @component.register("hello:foo")
         def dummy(context):
-            return Template("""<div>Hello, world!</div>""").render(Context(context))
+            return Template("""<div>Hello, world!</div>""").render(context)
 
         self.assertHTMLEqual(
             Template(
@@ -206,7 +206,7 @@ class ExampleComponentsTest(TestCase):
     def test_component_with_name_with_dot(self):
         @component.register("hello.foo")
         def dummy(context):
-            return Template("""<div>Hello, world!</div>""").render(Context(context))
+            return Template("""<div>Hello, world!</div>""").render(context)
 
         self.assertHTMLEqual(
             Template(
@@ -222,7 +222,7 @@ class ExampleComponentsTest(TestCase):
     def test_component_with_attributes(self):
         @component.register("hello")
         def dummy(context):
-            return Template("""<div {{ attributes }}>Hello, world!</div>""").render(Context(context))
+            return Template("""<div {{ attributes }}>Hello, world!</div>""").render(context)
 
         self.assertHTMLEqual(
             Template(
@@ -238,7 +238,7 @@ class ExampleComponentsTest(TestCase):
     def test_component_with_empty_attributes(self):
         @component.register("hello")
         def dummy(context):
-            return Template("""<div {{ attributes }}>Hello, world!</div>""").render(Context(context))
+            return Template("""<div {{ attributes }}>Hello, world!</div>""").render(context)
 
         self.assertHTMLEqual(
             Template(
@@ -258,7 +258,7 @@ class ExampleComponentsTest(TestCase):
                 """
                 <div>{% render_slot slots.inner_block %}</div>
                 """
-            ).render(Context(context))
+            ).render(context)
 
         self.assertHTMLEqual(
             Template(
@@ -280,7 +280,7 @@ class ExampleComponentsTest(TestCase):
                     <h1>{% render_slot slots.title %}</h1>
                 </div>
                 """
-            ).render(Context(context))
+            ).render(context)
 
         self.assertHTMLEqual(
             Template(
@@ -308,7 +308,7 @@ class ExampleComponentsTest(TestCase):
                     <div>{% render_slot slots.inner_block %}</div>
                 </div>
                 """
-            ).render(Context(context))
+            ).render(context)
 
         self.assertHTMLEqual(
             Template(
@@ -340,7 +340,7 @@ class ExampleComponentsTest(TestCase):
                     {% endfor %}
                 </ul>
                 """
-            ).render(Context(context))
+            ).render(context)
 
         self.assertHTMLEqual(
             Template(
@@ -370,7 +370,7 @@ class ExampleComponentsTest(TestCase):
                     {% render_slot slots.row %}
                 </ul>
                 """
-            ).render(Context(context))
+            ).render(context)
 
         self.assertHTMLEqual(
             Template(
@@ -408,7 +408,7 @@ class ExampleComponentsTest(TestCase):
                     {% endfor %}
                 </ul>
                 """
-            ).render(Context(context))
+            ).render(context)
 
         self.assertHTMLEqual(
             Template(
@@ -435,7 +435,7 @@ class ExampleComponentsTest(TestCase):
                     <div {{ slots.body.attributes }}>{% render_slot slots.body %}</div>
                 </div>
                 """
-            ).render(Context(context))
+            ).render(context)
 
         self.assertHTMLEqual(
             Template(
@@ -465,7 +465,7 @@ class ExampleComponentsTest(TestCase):
                     {% render_slot slots.inner_block %}
                 </div>
                 """
-            ).render(Context(context))
+            ).render(context)
 
         self.assertHTMLEqual(
             Template(
@@ -491,7 +491,7 @@ class ExampleComponentsTest(TestCase):
                 """
                 <div>{{ message }}</div>
                 """
-            ).render(Context(context))
+            ).render(context)
 
         self.assertHTMLEqual(
             Template(
@@ -513,7 +513,7 @@ class ExampleComponentsTest(TestCase):
                 """
                 <div {% merge_attrs attributes class="font-bold" @click="foo" %}></div>
                 """
-            ).render(Context(context))
+            ).render(context)
 
         self.assertHTMLEqual(
             Template(
@@ -533,7 +533,7 @@ class ExampleComponentsTest(TestCase):
                 """
                 <div {{ attributes }}>{% render_slot slots.inner_block %}</div>
                 """
-            ).render(Context(context))
+            ).render(context)
 
         self.assertHTMLEqual(
             Template(
@@ -563,7 +563,7 @@ class ExampleComponentsTest(TestCase):
                     <div {{ slots.body.attributes }}>{% render_slot slots.body %}</div>
                 </div>
                 """
-            ).render(Context(context))
+            ).render(context)
 
         self.assertHTMLEqual(
             Template(
@@ -601,7 +601,7 @@ class ExampleComponentsTest(TestCase):
                     {% render_slot slots.inner_block %}
                 </h1>
                 """
-            ).render(Context(context))
+            ).render(context)
 
         @component.register("hello")
         def dummy(context):
@@ -618,7 +618,7 @@ class ExampleComponentsTest(TestCase):
                     </div>
                 </div>
                 """
-            ).render(Context(context))
+            ).render(context)
 
         self.assertHTMLEqual(
             Template(
@@ -647,7 +647,7 @@ class ExampleComponentsTest(TestCase):
                 """
                 <div>{% render_slot slots.default_slot %}</div>
                 """
-            ).render(Context(context))
+            ).render(context)
 
         with self.settings(
             WEB_COMPONENTS={
@@ -690,7 +690,7 @@ class ComponentTagFormatterTest(TestCase):
 
             @component.register("hello")
             def dummy(context):
-                return Template("""<div>{% render_slot slots.inner_block %}</div>""").render(Context(context))
+                return Template("""<div>{% render_slot slots.inner_block %}</div>""").render(context)
 
             self.assertHTMLEqual(
                 Template(
@@ -712,7 +712,7 @@ class ComponentTagFormatterTest(TestCase):
 
             @component.register("hello")
             def dummy(context):
-                return Template("""<div>Hello, world!</div>""").render(Context(context))
+                return Template("""<div>Hello, world!</div>""").render(context)
 
             self.assertHTMLEqual(
                 Template(
@@ -752,7 +752,7 @@ class RenderSlotTest(TestCase):
                 """
                 <div>{% render_slot slots.inner_block %}</div>
                 """
-            ).render(Context(context))
+            ).render(context)
 
         self.assertHTMLEqual(
             Template(
@@ -775,7 +775,7 @@ class RenderSlotTest(TestCase):
                     <div>{% render_slot slots.inner_block %}</div>
                 </div>
                 """
-            ).render(Context(context))
+            ).render(context)
 
         self.assertHTMLEqual(
             Template(
@@ -816,7 +816,7 @@ class RenderSlotTest(TestCase):
                     {% endfor %}
                 </table>
                 """
-            ).render(Context(context))
+            ).render(context)
 
         context = Context(
             {
