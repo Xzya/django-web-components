@@ -13,9 +13,7 @@ from django_web_components.component import (
     ComponentTagFormatter,
     token_kwargs,
     split_attributes,
-    render_template_string,
 )
-from django_web_components.template import template_cache
 from django_web_components.templatetags.components import SlotNodeList, SlotNode
 
 
@@ -1149,43 +1147,3 @@ class SplitAttributesTest(TestCase):
 
     def test_splits_attrs(self):
         self.assertEqual(split_attributes({":let": "fruit", "foo": "bar"}), ({":let": "fruit"}, {"foo": "bar"}))
-
-
-class RenderTemplateStringTest(TestCase):
-    def setUp(self) -> None:
-        template_cache.clear()
-        component.registry.clear()
-
-    def test_renders_template(self):
-        self.assertEqual(
-            render_template_string("hello", Context()),
-            "hello",
-        )
-
-    def test_caches_template(self):
-        template_cache["test"] = cached_template = Template("cached hello")
-        self.assertEqual(
-            render_template_string("hello", Context(), cache_key="test"),
-            "cached hello",
-        )
-        self.assertTrue(template_cache["test"] is cached_template)
-
-    def test_can_render_component(self):
-        @component.register("hello")
-        def dummy(context):
-            return render_template_string(
-                """<div>Hello, world!</div>""",
-                context,
-                "hello",
-            )
-
-        self.assertHTMLEqual(
-            Template(
-                """
-                {% hello %}{% endhello %}
-                """
-            ).render(Context()),
-            """
-            <div>Hello, world!</div>
-            """,
-        )

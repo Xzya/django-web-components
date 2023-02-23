@@ -143,20 +143,19 @@ For tiny components, it may feel cumbersome to manage both the component class a
 
 ```python
 from django_web_components import component
-from django_web_components.component import render_template_string
+from django_web_components.template import CachedTemplate
 
 @component.register("alert")
 class Alert(component.Component):
     def render(self, context) -> str:
-        return render_template_string(
+        return CachedTemplate(
             """
             <div class="alert alert-primary" role="alert">
                 {% render_slot slots.inner_block %}
             </div>
             """,
-            context,
-            cache_key="alert",
-        )
+            name="alert",
+        ).render(context)
 ```
 
 ### Function based components
@@ -165,19 +164,18 @@ A component may also be defined as a single function that accepts a `context` an
 
 ```python
 from django_web_components import component
-from django_web_components.component import render_template_string
+from django_web_components.template import CachedTemplate
 
 @component.register("alert")
 def alert(context):
-    return render_template_string(
+    return CachedTemplate(
         """
         <div class="alert alert-primary" role="alert">
             {% render_slot slots.inner_block %}
         </div>
         """,
-        context,
-        cache_key="alert",
-    )
+        name="alert",
+    ).render(context)
 ```
 
 The examples in this guide will mostly use function based components, since it's easier to exemplify as the component code and template are in the same place, but you are free to choose whichever method you prefer.
@@ -213,25 +211,6 @@ def alert(context):
     ).render(context)
 ```
 
-Alternatively you can use the `render_template_string` shortcut which uses `CachedTemplate` internally:
-
-```python
-from django_web_components import component
-from django_web_components.component import render_template_string
-
-@component.register("alert")
-def alert(context):
-    return render_template_string(
-        """
-        <div class="alert alert-primary" role="alert">
-            {% render_slot slots.inner_block %}
-        </div>
-        """,
-        context,
-        cache_key="alert",
-    )
-```
-
 So in reality, the caching should not be an issue when using template strings, since `CachedTemplate` is just as fast as using the cached loader with template files.
 
 Regarding formatting support and syntax highlighting, there is no good solution for template strings. PyCharm supports [language injection](https://www.jetbrains.com/help/pycharm/using-language-injections.html#use-language-injection-comments) which allows you to add a `# language=html` comment before the template string and get syntax highlighting, however, it only highlights HTML and not the Django tags, and you are still missing support for formatting. Maybe the editors will add better support for this in the future, but for the moment you will be missing syntax highlighting and formatting if you go this route. There is an [open conversation](https://github.com/EmilStenstrom/django-components/issues/183) about this on the `django-components` repo, credits to [EmilStenstrom](https://github.com/EmilStenstrom) for moving the conversation forward with the VSCode team.
@@ -253,7 +232,7 @@ class MyAppConfig(AppConfig):
         # Implicitly register components decorated with @component.register
         from . import components  # noqa
         # OR explicitly register a component
-        component.register("card")(components.CardComponent)
+        component.register("card")(components.Card)
 ```
 
 You may also `unregister` an existing component, or get a component from the registry:
@@ -657,12 +636,13 @@ The slot content will also have access to the component's context. To explore th
 
 ```python
 from django_web_components import component
-from django.template import Template
+from django_web_components.template import CachedTemplate
 
 @component.register("unordered_list")
 def unordered_list(context):
     context["entries"] = context["attributes"].pop("entries", [])
-    return Template(
+
+    return CachedTemplate(
         """
         <ul>
             {% for entry in entries %}
@@ -671,7 +651,8 @@ def unordered_list(context):
                 </li>
             {% endfor %}
         </ul>
-        """
+        """,
+        name="unordered_list",
     ).render(context)
 ```
 
@@ -724,12 +705,13 @@ Similar to the components, you may assign additional attributes to slots. Below 
 
 ```python
 from django_web_components import component
-from django.template import Template
+from django_web_components.template import CachedTemplate
 
 @component.register("table")
 def table(context):
     context["rows"] = context["attributes"].pop("rows", [])
-    return Template(
+
+    return CachedTemplate(
         """
         <table>
             <tr>
@@ -747,7 +729,8 @@ def table(context):
                 </tr>
             {% endfor %}
         </table>
-        """
+        """,
+        name="table",
     ).render(context)
 ```
 
@@ -789,7 +772,7 @@ You may also nest components to achieve more complicated elements. Here is an ex
 
 ```python
 from django_web_components import component
-from django.template import Template
+from django_web_components.template import CachedTemplate
 import uuid
 
 @component.register("accordion")
@@ -797,12 +780,13 @@ def accordion(context):
     context["accordion_id"] = context["attributes"].pop("id", str(uuid.uuid4()))
     context["always_open"] = context["attributes"].pop("always_open", False)
 
-    return Template(
+    return CachedTemplate(
         """
         <div class="accordion" id="{{ accordion_id }}">
             {% render_slot slots.inner_block %}
         </div>
         """,
+        name="accordion",
     ).render(context)
 
 
@@ -811,7 +795,7 @@ def accordion_item(context):
     context["id"] = context["attributes"].pop("id", str(uuid.uuid4()))
     context["open"] = context["attributes"].pop("open", False)
 
-    return Template(
+    return CachedTemplate(
         """
         <div class="accordion-item" id="{{ id }}">
             <h2 class="accordion-header" id="{{ id }}-header">
@@ -840,6 +824,7 @@ def accordion_item(context):
             </div>
         </div>
         """,
+        name="accordion_item",
     ).render(context)
 ```
 
