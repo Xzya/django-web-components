@@ -125,16 +125,16 @@ There are two approaches to writing components: class based components and funct
 ```python
 from django_web_components import component
 
-@component.register("card")
-class CardComponent(component.Component):
+@component.register("alert")
+class Alert(component.Component):
     # You may also override the get_template_name() method instead
-    template_name = "components/card.html"
+    template_name = "components/alert.html"
 
-    # Extra context data will be passed to the template
+    # Extra context data will be passed to the template context
     def get_context_data(self, **kwargs) -> dict:
-      context = super().get_context_data(**kwargs)
-      context["open"] = True
-      return context
+        return {
+            "dismissible": False,
+        }
 ```
 
 The component will be rendered by calling the `render(context)` method, which by default will load the template file and render it.
@@ -143,18 +143,20 @@ For tiny components, it may feel cumbersome to manage both the component class a
 
 ```python
 from django_web_components import component
-from django.template import Template
+from django_web_components.component import render_template_string
 
-@component.register("card")
-class CardComponent(component.Component):
+@component.register("alert")
+class Alert(component.Component):
     def render(self, context) -> str:
-        return Template(
+        return render_template_string(
             """
-            <div class="card">
+            <div class="alert alert-primary" role="alert">
                 {% render_slot slots.inner_block %}
             </div>
-            """
-        ).render(context)
+            """,
+            context,
+            cache_key="alert",
+        )
 ```
 
 ### Function based components
@@ -163,20 +165,78 @@ A component may also be defined as a single function that accepts a `context` an
 
 ```python
 from django_web_components import component
-from django.template import Template
+from django_web_components.component import render_template_string
 
-@component.register("card")
-def card(context):
-    return Template(
+@component.register("alert")
+def alert(context):
+    return render_template_string(
         """
-        <div class="card">
+        <div class="alert alert-primary" role="alert">
             {% render_slot slots.inner_block %}
         </div>
-        """
-    ).render(context)
+        """,
+        context,
+        cache_key="alert",
+    )
 ```
 
 The examples in this guide will mostly use function based components, since it's easier to exemplify as the component code and template are in the same place, but you are free to choose whichever method you prefer.
+
+### Template files vs template strings
+
+The library uses the regular Django templates, which allows you to either [load templates from files](https://docs.djangoproject.com/en/dev/ref/templates/api/#loading-templates), or create [Template objects](https://docs.djangoproject.com/en/dev/ref/templates/api/#django.template.Template) directly using template strings. Both methods are supported, and both have advantages and disadvantages:
+
+- Template files
+  - You get formatting support and syntax highlighting from your editor
+  - You get [caching](https://docs.djangoproject.com/en/dev/ref/templates/api/#django.template.loaders.cached.Loader) by default
+  - Harder to manage / reason about since your code is split from the template
+- Template strings
+  - Easier to manage / reason about since your component's code and template are in the same place
+  - You lose formatting support and syntax highlighting since the template is just a string
+  - You lose caching
+
+Regarding caching, the library provides a `CachedTemplate`, which will cache and reuse the `Template` object as long as you provide a `name` for it, which will be used as the cache key:
+
+```python
+from django_web_components import component
+from django_web_components.template import CachedTemplate
+
+@component.register("alert")
+def alert(context):
+    return CachedTemplate(
+        """
+        <div class="alert alert-primary" role="alert">
+            {% render_slot slots.inner_block %}
+        </div>
+        """,
+        name="alert",
+    ).render(context)
+```
+
+Alternatively you can use the `render_template_string` shortcut which uses `CachedTemplate` internally:
+
+```python
+from django_web_components import component
+from django_web_components.component import render_template_string
+
+@component.register("alert")
+def alert(context):
+    return render_template_string(
+        """
+        <div class="alert alert-primary" role="alert">
+            {% render_slot slots.inner_block %}
+        </div>
+        """,
+        context,
+        cache_key="alert",
+    )
+```
+
+So in reality, the caching should not be an issue when using template strings, since `CachedTemplate` is just as fast as using the cached loader with template files.
+
+Regarding formatting support and syntax highlighting, there is no good solution for template strings. PyCharm supports [language injection](https://www.jetbrains.com/help/pycharm/using-language-injections.html#use-language-injection-comments) which allows you to add a `# language=html` comment before the template string and get syntax highlighting, however, it only highlights HTML and not the Django tags, and you are still missing support for formatting. Maybe the editors will add better support for this in the future, but for the moment you will be missing syntax highlighting and formatting if you go this route. There is an [open conversation](https://github.com/EmilStenstrom/django-components/issues/183) about this on the `django-components` repo, credits to [EmilStenstrom](https://github.com/EmilStenstrom) for moving the conversation forward with the VSCode team.
+
+In the end, it's a tradeoff. Use the method that makes the most sense for you.
 
 ## Registering your components
 
@@ -432,6 +492,8 @@ from django_web_components import component
 
 @component.register("alert")
 class Alert(component.Component):
+    template_name = "components/alert.html"
+
     def get_context_data(self, **kwargs):
         dismissible = self.attributes.pop("dismissible", False)
 
@@ -447,13 +509,15 @@ from django_web_components import component
 
 @component.register("alert")
 class Alert(component.Component):
+    template_name = "components/alert.html"
+
     def render(self, context):
         context["dismissible"] = context["attributes"].pop("dismissible", False)
 
         return super().render(context)
 ```
 
-Both the above solutions will work, and you can do the same for function based components. The component's template can then look like this:
+Both of the above solutions will work, and you can do the same for function based components. The component's template can then look like this:
 
 ```html
 <div {{ attributes }}>
@@ -810,7 +874,7 @@ You can then use them as follows:
 
 ## Setup for development and running the tests
 
-We are using `poetry` to manage the project's dependencies. Check out the documentation on how to install poetry here: https://python-poetry.org/docs/#installation
+The project uses `poetry` to manage the dependencies. Check out the documentation on how to install poetry here: https://python-poetry.org/docs/#installation
 
 Install the dependencies
 

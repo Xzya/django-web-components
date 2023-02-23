@@ -13,6 +13,7 @@ from django.utils.safestring import mark_safe, SafeString
 
 from django_web_components.conf import app_settings
 from django_web_components.registry import ComponentRegistry
+from django_web_components.template import CachedTemplate
 
 # Global component registry
 registry = ComponentRegistry()
@@ -60,7 +61,6 @@ class Component:
         self.slots = slots or {}
 
     def get_context_data(self, **kwargs) -> dict:
-        # TODO: do we need kwargs here?
         return {}
 
     def get_template_name(self) -> Union[str, list, tuple]:
@@ -165,6 +165,18 @@ def render_component(*, name: str, attributes: dict, slots: dict, context: templ
 
     with context.push(extra_context):
         return component.render(context)
+
+
+def render_template_string(template_string, context, cache_key=None):
+    """
+    Renders the given template string.
+
+    If a cache_key is given, the Template instance will also be cached for future use.
+    """
+    return CachedTemplate(
+        template_string,
+        name=cache_key,
+    ).render(context)
 
 
 kwarg_re = _lazy_re_compile(

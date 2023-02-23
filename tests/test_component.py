@@ -13,7 +13,9 @@ from django_web_components.component import (
     ComponentTagFormatter,
     token_kwargs,
     split_attributes,
+    render_template_string,
 )
+from django_web_components.template import template_cache
 from django_web_components.templatetags.components import SlotNodeList, SlotNode
 
 
@@ -795,7 +797,6 @@ class RenderSlotTest(TestCase):
         )
 
     def test_can_render_scoped_slots(self):
-        # TODO: fix
         @component.register("table")
         def table(context):
             return Template(
@@ -907,6 +908,64 @@ class RenderSlotTest(TestCase):
                     <td>27</td>
                 </tr>
             </table>
+            """,
+        )
+
+    def test_scoped_slot_works_on_default_slot(self):
+        @component.register("unordered_list")
+        def unordered_list(context):
+            context["entries"] = context["attributes"].pop("entries", [])
+            return Template(
+                """
+                <ul>
+                    {% for entry in entries %}
+                        <li>
+                            {% render_slot slots.inner_block entry %}
+                        </li>
+                    {% endfor %}
+                </ul>
+                """
+            ).render(context)
+
+        context = Context(
+            {
+                "entries": ["apples", "bananas", "cherries"],
+            }
+        )
+
+        # directly accessing the variable
+        self.assertHTMLEqual(
+            Template(
+                """
+                {% unordered_list entries=entries %}
+                    I like {{ entry }}!
+                {% endunordered_list %}
+                """
+            ).render(context),
+            """
+            <ul>
+                <li>I like apples!</li>
+                <li>I like bananas!</li>
+                <li>I like cherries!</li>
+            </ul>
+            """,
+        )
+
+        # using ':let' to define the context variable
+        self.assertHTMLEqual(
+            Template(
+                """
+                {% unordered_list :let="fruit" entries=entries %}
+                    I like {{ fruit }}!
+                {% endunordered_list %}
+                """
+            ).render(context),
+            """
+            <ul>
+                <li>I like apples!</li>
+                <li>I like bananas!</li>
+                <li>I like cherries!</li>
+            </ul>
             """,
         )
 
@@ -1090,3 +1149,43 @@ class SplitAttributesTest(TestCase):
 
     def test_splits_attrs(self):
         self.assertEqual(split_attributes({":let": "fruit", "foo": "bar"}), ({":let": "fruit"}, {"foo": "bar"}))
+
+
+class RenderTemplateStringTest(TestCase):
+    def setUp(self) -> None:
+        template_cache.clear()
+        component.registry.clear()
+
+    def test_renders_template(self):
+        self.assertEqual(
+            render_template_string("hello", Context()),
+            "hello",
+        )
+
+    def test_caches_template(self):
+        template_cache["test"] = cached_template = Template("cached hello")
+        self.assertEqual(
+            render_template_string("hello", Context(), cache_key="test"),
+            "cached hello",
+        )
+        self.assertTrue(template_cache["test"] is cached_template)
+
+    def test_can_render_component(self):
+        @component.register("hello")
+        def dummy(context):
+            return render_template_string(
+                """<div>Hello, world!</div>""",
+                context,
+                "hello",
+            )
+
+        self.assertHTMLEqual(
+            Template(
+                """
+                {% hello %}{% endhello %}
+                """
+            ).render(Context()),
+            """
+            <div>Hello, world!</div>
+            """,
+        )
