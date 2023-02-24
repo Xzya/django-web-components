@@ -18,32 +18,48 @@ from django_web_components.registry import ComponentRegistry
 registry = ComponentRegistry()
 
 
-def register(name: str, target_register: template.Library = None):
+def register(name: str, component=None, target_register: template.Library = None):
     """
-    Class decorator to register a component.
+    Register a component.
     """
     from django_web_components.templatetags.components import (
         register as tag_register,
-        create_component_tag,
     )
 
+    # use the default library if none is passed
     if target_register is None:
         target_register = tag_register
 
+    # called directly
+    # register("alert", Alert)
+    if component:
+        return _register(name=name, component=component, target_register=target_register)
+
+    # called as decorator
+    # @register("alert")
     def decorator(component):
-        registry.register(name=name, component=component)
-
-        formatter = get_component_tag_formatter()
-
-        # Inline component
-        target_register.tag(formatter.format_inline_tag(name), create_component_tag(name))
-
-        # Block component
-        target_register.tag(formatter.format_block_start_tag(name), create_component_tag(name))
-
-        return component
+        return _register(name=name, component=component, target_register=target_register)
 
     return decorator
+
+
+def _register(name: str, component, target_register: template.Library):
+    from django_web_components.templatetags.components import (
+        create_component_tag,
+    )
+
+    # add the component to the registry
+    registry.register(name=name, component=component)
+
+    formatter = get_component_tag_formatter()
+
+    # register the inline tag
+    target_register.tag(formatter.format_inline_tag(name), create_component_tag(name))
+
+    # register the block tag
+    target_register.tag(formatter.format_block_start_tag(name), create_component_tag(name))
+
+    return component
 
 
 class Component:

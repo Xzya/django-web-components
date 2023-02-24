@@ -232,7 +232,7 @@ class MyAppConfig(AppConfig):
         # Implicitly register components decorated with @component.register
         from . import components  # noqa
         # OR explicitly register a component
-        component.register("card")(components.Card)
+        component.register("card", components.Card)
 ```
 
 You may also `unregister` an existing component, or get a component from the registry:

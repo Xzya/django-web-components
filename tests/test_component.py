@@ -730,10 +730,21 @@ class RegisterTest(TestCase):
     def setUp(self) -> None:
         component.registry.clear()
 
-    def test_register_decorator(self):
+    def test_call_register_as_decorator(self):
         @component.register("hello")
         def dummy(context):
             pass
+
+        self.assertEqual(
+            component.registry.get("hello"),
+            dummy,
+        )
+
+    def test_call_register_directly(self):
+        def dummy(context):
+            pass
+
+        component.register("hello", dummy)
 
         self.assertEqual(
             component.registry.get("hello"),
