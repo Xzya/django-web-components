@@ -1,18 +1,12 @@
 from django.core.exceptions import ImproperlyConfigured
 from django.template import Context, Template, NodeList
-from django.template.base import TextNode, Parser
+from django.template.base import TextNode
 from django.test import TestCase
-from django.utils.safestring import mark_safe, SafeString
 
+import django_web_components.attributes
 from django_web_components import component
 from django_web_components.component import (
-    AttributeBag,
     Component,
-    attributes_to_string,
-    merge_attributes,
-    ComponentTagFormatter,
-    token_kwargs,
-    split_attributes,
 )
 from django_web_components.templatetags.components import SlotNodeList, SlotNode
 
@@ -44,94 +38,6 @@ class ComponentTest(TestCase):
                 )
             ),
             """<div>Hello, world!</div>""",
-        )
-
-
-class AttributesToStringTest(TestCase):
-    def test_simple_attribute(self):
-        self.assertEqual(
-            attributes_to_string({"foo": "bar"}),
-            'foo="bar"',
-        )
-
-    def test_multiple_attributes(self):
-        self.assertEqual(
-            attributes_to_string({"class": "foo", "style": "color: red;"}),
-            'class="foo" style="color: red;"',
-        )
-
-    def test_escapes_special_characters(self):
-        self.assertEqual(
-            attributes_to_string({"x-on:click": "bar", "@click": "'baz'"}),
-            'x-on:click="bar" @click="&#x27;baz&#x27;"',
-        )
-
-    def test_does_not_escape_special_characters_if_safe_string(self):
-        self.assertEqual(
-            attributes_to_string({"foo": mark_safe("'bar'")}),
-            "foo=\"'bar'\"",
-        )
-
-    def test_result_is_safe_string(self):
-        result = attributes_to_string({"foo": mark_safe("'bar'")})
-        self.assertTrue(type(result) == SafeString)
-
-    def test_attribute_with_no_value(self):
-        self.assertEqual(
-            attributes_to_string({"required": None}),
-            "required",
-        )
-
-    def test_attribute_with_true_value(self):
-        self.assertEqual(
-            attributes_to_string({"required": True}),
-            "required",
-        )
-
-
-class MergeAttributesTest(TestCase):
-    def test_merges_attributes(self):
-        self.assertEqual(
-            merge_attributes({"foo": "bar"}, {"bar": "baz"}),
-            {"foo": "bar", "bar": "baz"},
-        )
-
-    def test_overwrites_defaults(self):
-        self.assertEqual(
-            merge_attributes({"foo": "bar"}, {"foo": "baz", "data": "foo"}),
-            {"foo": "bar", "data": "foo"},
-        )
-
-    def test_appends_appendable_attributes_instead_of_overwriting(self):
-        self.assertEqual(
-            merge_attributes({"class": "foo"}, {"class": "bar"}),
-            {"class": "bar foo"},
-        )
-        self.assertEqual(
-            merge_attributes({"class": "foo"}, {}),
-            {"class": "foo"},
-        )
-        self.assertEqual(
-            merge_attributes({}, {"class": "foo"}),
-            {"class": "foo"},
-        )
-
-    def test_appends_attributes(self):
-        self.assertEqual(
-            merge_attributes({"foo": "bar"}, {}, {"foo": "baz", "data": "foo"}),
-            {"foo": "bar baz", "data": "foo"},
-        )
-
-    def test_returns_attribute_bag(self):
-        result = merge_attributes(AttributeBag({"foo": "bar"}), {})
-        self.assertTrue(type(result) == AttributeBag)
-
-
-class AttributeBagTest(TestCase):
-    def test_str_converts_to_string(self):
-        self.assertEqual(
-            str(AttributeBag({"foo": "bar"})),
-            'foo="bar"',
         )
 
 
@@ -219,6 +125,30 @@ class ExampleComponentsTest(TestCase):
             """,
         )
 
+    def test_component_with_context_passed_in(self):
+        @component.register("hello")
+        def dummy(context):
+            return Template(
+                """
+                <div>{{ message }}</div>
+                """
+            ).render(context)
+
+        self.assertHTMLEqual(
+            Template(
+                """
+                {% with message="hello" %}
+                    {% hello message="hello" %}{% endhello %}
+                {% endwith %}
+                """
+            ).render(Context({})),
+            """
+            <div>hello</div>
+            """,
+        )
+
+    # Attributes
+
     def test_component_with_attributes(self):
         @component.register("hello")
         def dummy(context):
@@ -251,6 +181,56 @@ class ExampleComponentsTest(TestCase):
             """,
         )
 
+    def test_attributes_from_context_variables(self):
+        @component.register("hello")
+        def dummy(context):
+            return Template(
+                """
+                <div {{ attributes }}>
+                    {% render_slot slots.inner_block %}
+                </div>
+                """
+            ).render(context)
+
+        self.assertHTMLEqual(
+            Template(
+                """
+                {% with object_id="123" message="Hello" %}
+                    {% hello id=object_id %}
+                        <div>{{ message }}</div>
+                    {% endhello %}
+                {% endwith %}
+                """
+            ).render(Context({})),
+            """
+            <div id="123">
+                <div>Hello</div>
+            </div>
+            """,
+        )
+
+    def test_attributes_with_defaults(self):
+        @component.register("hello")
+        def dummy(context):
+            return Template(
+                """
+                <div {% merge_attrs attributes class="font-bold" @click="foo" %}></div>
+                """
+            ).render(context)
+
+        self.assertHTMLEqual(
+            Template(
+                """
+                {% hello id="123" class="some-class" %}{% endhello %}
+                """
+            ).render(Context({})),
+            """
+            <div id="123" class="font-bold some-class" @click="foo"></div>
+            """,
+        )
+
+    # Slots
+
     def test_component_with_default_slot(self):
         @component.register("hello")
         def dummy(context):
@@ -271,13 +251,14 @@ class ExampleComponentsTest(TestCase):
             """,
         )
 
-    def test_component_with_slot(self):
+    def test_component_with_named_slot(self):
         @component.register("hello")
         def dummy(context):
             return Template(
                 """
                 <div>
-                    <h1>{% render_slot slots.title %}</h1>
+                    <div>{% render_slot slots.title %}</div>
+                    <div>{% render_slot slots.inner_block %}</div>
                 </div>
                 """
             ).render(context)
@@ -286,13 +267,15 @@ class ExampleComponentsTest(TestCase):
             Template(
                 """
                 {% hello %}
-                    {% slot title %}Lorem ipsum{% endslot title %}
+                    {% slot title %}Title{% endslot %}
+                    Default slot
                 {% endhello %}
                 """
             ).render(Context({})),
             """
             <div>
-                <h1>Lorem ipsum</h1>
+                <div>Title</div>
+                <div>Default slot</div>
             </div>
             """,
         )
@@ -425,6 +408,8 @@ class ExampleComponentsTest(TestCase):
             """,
         )
 
+    # Slot attributes
+
     def test_slots_with_attributes(self):
         @component.register("hello")
         def dummy(context):
@@ -456,354 +441,7 @@ class ExampleComponentsTest(TestCase):
             """,
         )
 
-    def test_attributes_from_context_variables(self):
-        @component.register("hello")
-        def dummy(context):
-            return Template(
-                """
-                <div {{ attributes }}>
-                    {% render_slot slots.inner_block %}
-                </div>
-                """
-            ).render(context)
-
-        self.assertHTMLEqual(
-            Template(
-                """
-                {% with object_id="123" message="Hello" %}
-                    {% hello id=object_id %}
-                        <div>{{ message }}</div>
-                    {% endhello %}
-                {% endwith %}
-                """
-            ).render(Context({})),
-            """
-            <div id="123">
-                <div>Hello</div>
-            </div>
-            """,
-        )
-
-    def test_component_with_context_passed_in(self):
-        @component.register("hello")
-        def dummy(context):
-            return Template(
-                """
-                <div>{{ message }}</div>
-                """
-            ).render(context)
-
-        self.assertHTMLEqual(
-            Template(
-                """
-                {% with message="hello" %}
-                    {% hello message="hello" %}{% endhello %}
-                {% endwith %}
-                """
-            ).render(Context({})),
-            """
-            <div>hello</div>
-            """,
-        )
-
-    def test_attributes_with_defaults(self):
-        @component.register("hello")
-        def dummy(context):
-            return Template(
-                """
-                <div {% merge_attrs attributes class="font-bold" @click="foo" %}></div>
-                """
-            ).render(context)
-
-        self.assertHTMLEqual(
-            Template(
-                """
-                {% hello id="123" class="some-class" %}{% endhello %}
-                """
-            ).render(Context({})),
-            """
-            <div id="123" class="font-bold some-class" @click="foo"></div>
-            """,
-        )
-
-    def test_nested_component(self):
-        @component.register("hello")
-        def dummy(context):
-            return Template(
-                """
-                <div {{ attributes }}>{% render_slot slots.inner_block %}</div>
-                """
-            ).render(context)
-
-        self.assertHTMLEqual(
-            Template(
-                """
-                {% hello class="foo" %}
-                    {% hello class="bar" %}
-                        Hello, world!
-                    {% endhello %}
-                {% endhello %}
-                """
-            ).render(Context({})),
-            """
-            <div class="foo">
-                <div class="bar">
-                    Hello, world!
-                </div>
-            </div>
-            """,
-        )
-
-    def test_nested_component_with_slots(self):
-        @component.register("hello")
-        def dummy(context):
-            return Template(
-                """
-                <div {{ attributes }}>
-                    <div {{ slots.body.attributes }}>{% render_slot slots.body %}</div>
-                </div>
-                """
-            ).render(context)
-
-        self.assertHTMLEqual(
-            Template(
-                """
-                {% hello class="hello1" %}
-                    {% slot body class="foo" %}
-                        {% hello class="hello2" %}
-                            {% slot body class="bar" %}
-                                Hello, world!
-                            {% endslot %}
-                        {% endhello %}
-                    {% endslot %}
-                {% endhello %}
-                """
-            ).render(Context({})),
-            """
-            <div class="hello1">
-                <div class="foo">
-                    <div class="hello2">
-                        <div class="bar">
-                            Hello, world!
-                        </div>
-                    </div>
-                </div>
-            </div>
-            """,
-        )
-
-    def test_component_using_other_components(self):
-        @component.register("header")
-        def header(context):
-            return Template(
-                """
-                <h1>
-                    {% render_slot slots.inner_block %}
-                </h1>
-                """
-            ).render(context)
-
-        @component.register("hello")
-        def dummy(context):
-            context["title"] = context["attributes"].pop("title", "")
-            return Template(
-                """
-                <div>
-                    {% header %}
-                        {{ title }}
-                    {% endheader %}
-
-                    <div>
-                        {% render_slot slots.inner_block %}
-                    </div>
-                </div>
-                """
-            ).render(context)
-
-        self.assertHTMLEqual(
-            Template(
-                """
-                {% hello title="Some title" %}
-                    Hello, world!
-                {% endhello %}
-                """
-            ).render(Context({})),
-            """
-            <div>
-                <h1>
-                    Some title
-                </h1>
-                <div>
-                    Hello, world!
-                </div>
-            </div>
-            """,
-        )
-
-    def test_can_change_default_slot_name_from_settings(self):
-        @component.register("hello")
-        def dummy(context):
-            return Template(
-                """
-                <div>{% render_slot slots.default_slot %}</div>
-                """
-            ).render(context)
-
-        with self.settings(
-            WEB_COMPONENTS={
-                "DEFAULT_SLOT_NAME": "default_slot",
-            }
-        ):
-            self.assertHTMLEqual(
-                Template(
-                    """
-                    {% hello %}Hello{% endhello %}
-                    """
-                ).render(Context({})),
-                """
-                <div>Hello</div>
-                """,
-            )
-
-
-class CustomComponentTagFormatter(ComponentTagFormatter):
-    def format_block_start_tag(self, name: str) -> str:
-        return f"#{name}"
-
-    def format_block_end_tag(self, name: str) -> str:
-        return f"/{name}"
-
-    def format_inline_tag(self, name: str) -> str:
-        return f"_{name}"
-
-
-class ComponentTagFormatterTest(TestCase):
-    def setUp(self) -> None:
-        component.registry.clear()
-
-    def test_can_change_component_block_tags(self):
-        with self.settings(
-            WEB_COMPONENTS={
-                "DEFAULT_COMPONENT_TAG_FORMATTER": "tests.test_component.CustomComponentTagFormatter",
-            },
-        ):
-
-            @component.register("hello")
-            def dummy(context):
-                return Template("""<div>{% render_slot slots.inner_block %}</div>""").render(context)
-
-            self.assertHTMLEqual(
-                Template(
-                    """
-                    {% #hello %}Hello, world!{% /hello %}
-                    """
-                ).render(Context({})),
-                """
-                <div>Hello, world!</div>
-                """,
-            )
-
-    def test_can_change_component_inline_tag(self):
-        with self.settings(
-            WEB_COMPONENTS={
-                "DEFAULT_COMPONENT_TAG_FORMATTER": "tests.test_component.CustomComponentTagFormatter",
-            },
-        ):
-
-            @component.register("hello")
-            def dummy(context):
-                return Template("""<div>Hello, world!</div>""").render(context)
-
-            self.assertHTMLEqual(
-                Template(
-                    """
-                    {% _hello %}
-                    """
-                ).render(Context({})),
-                """
-                <div>Hello, world!</div>
-                """,
-            )
-
-
-class RegisterTest(TestCase):
-    def setUp(self) -> None:
-        component.registry.clear()
-
-    def test_call_register_as_decorator(self):
-        @component.register("hello")
-        def dummy(context):
-            pass
-
-        self.assertEqual(
-            component.registry.get("hello"),
-            dummy,
-        )
-
-    def test_call_register_directly(self):
-        def dummy(context):
-            pass
-
-        component.register("hello", dummy)
-
-        self.assertEqual(
-            component.registry.get("hello"),
-            dummy,
-        )
-
-
-class RenderSlotTest(TestCase):
-    def setUp(self) -> None:
-        component.registry.clear()
-
-    def test_can_render_default_slot(self):
-        @component.register("hello")
-        def dummy(context):
-            return Template(
-                """
-                <div>{% render_slot slots.inner_block %}</div>
-                """
-            ).render(context)
-
-        self.assertHTMLEqual(
-            Template(
-                """
-                {% hello %}Foo{% endhello %}
-                """
-            ).render(Context({})),
-            """
-            <div>Foo</div>
-            """,
-        )
-
-    def test_can_render_custom_slot(self):
-        @component.register("hello")
-        def dummy(context):
-            return Template(
-                """
-                <div>
-                    <div>{% render_slot slots.title %}</div>
-                    <div>{% render_slot slots.inner_block %}</div>
-                </div>
-                """
-            ).render(context)
-
-        self.assertHTMLEqual(
-            Template(
-                """
-                {% hello %}
-                    {% slot title %}Title{% endslot %}
-                    Default slot
-                {% endhello %}
-                """
-            ).render(Context({})),
-            """
-            <div>
-                <div>Title</div>
-                <div>Default slot</div>
-            </div>
-            """,
-        )
+    # Scoped slots
 
     def test_can_render_scoped_slots(self):
         @component.register("table")
@@ -978,6 +616,149 @@ class RenderSlotTest(TestCase):
             """,
         )
 
+    # Nested components
+
+    def test_nested_component(self):
+        @component.register("hello")
+        def dummy(context):
+            return Template(
+                """
+                <div {{ attributes }}>{% render_slot slots.inner_block %}</div>
+                """
+            ).render(context)
+
+        self.assertHTMLEqual(
+            Template(
+                """
+                {% hello class="foo" %}
+                    {% hello class="bar" %}
+                        Hello, world!
+                    {% endhello %}
+                {% endhello %}
+                """
+            ).render(Context({})),
+            """
+            <div class="foo">
+                <div class="bar">
+                    Hello, world!
+                </div>
+            </div>
+            """,
+        )
+
+    def test_nested_component_with_slots(self):
+        @component.register("hello")
+        def dummy(context):
+            return Template(
+                """
+                <div {{ attributes }}>
+                    <div {{ slots.body.attributes }}>{% render_slot slots.body %}</div>
+                </div>
+                """
+            ).render(context)
+
+        self.assertHTMLEqual(
+            Template(
+                """
+                {% hello class="hello1" %}
+                    {% slot body class="foo" %}
+                        {% hello class="hello2" %}
+                            {% slot body class="bar" %}
+                                Hello, world!
+                            {% endslot %}
+                        {% endhello %}
+                    {% endslot %}
+                {% endhello %}
+                """
+            ).render(Context({})),
+            """
+            <div class="hello1">
+                <div class="foo">
+                    <div class="hello2">
+                        <div class="bar">
+                            Hello, world!
+                        </div>
+                    </div>
+                </div>
+            </div>
+            """,
+        )
+
+    def test_component_using_other_components(self):
+        @component.register("header")
+        def header(context):
+            return Template(
+                """
+                <h1>
+                    {% render_slot slots.inner_block %}
+                </h1>
+                """
+            ).render(context)
+
+        @component.register("hello")
+        def dummy(context):
+            context["title"] = context["attributes"].pop("title", "")
+            return Template(
+                """
+                <div>
+                    {% header %}
+                        {{ title }}
+                    {% endheader %}
+
+                    <div>
+                        {% render_slot slots.inner_block %}
+                    </div>
+                </div>
+                """
+            ).render(context)
+
+        self.assertHTMLEqual(
+            Template(
+                """
+                {% hello title="Some title" %}
+                    Hello, world!
+                {% endhello %}
+                """
+            ).render(Context({})),
+            """
+            <div>
+                <h1>
+                    Some title
+                </h1>
+                <div>
+                    Hello, world!
+                </div>
+            </div>
+            """,
+        )
+
+    # Settings
+
+    def test_can_change_default_slot_name_from_settings(self):
+        @component.register("hello")
+        def dummy(context):
+            return Template(
+                """
+                <div>{% render_slot slots.default_slot %}</div>
+                """
+            ).render(context)
+
+        with self.settings(
+            WEB_COMPONENTS={
+                "DEFAULT_SLOT_NAME": "default_slot",
+            }
+        ):
+            self.assertHTMLEqual(
+                Template(
+                    """
+                    {% hello %}Hello{% endhello %}
+                    """
+                ).render(Context({})),
+                """
+                <div>Hello</div>
+                """,
+            )
+
 
 class RenderComponentTest(TestCase):
     def setUp(self) -> None:
@@ -992,7 +773,7 @@ class RenderComponentTest(TestCase):
         self.assertEqual(
             component.render_component(
                 name="test",
-                attributes=component.AttributeBag(),
+                attributes=django_web_components.attributes.AttributeBag(),
                 slots={},
                 context=Context({}),
             ),
@@ -1020,7 +801,7 @@ class RenderComponentTest(TestCase):
         self.assertHTMLEqual(
             component.render_component(
                 name="test",
-                attributes=component.AttributeBag(
+                attributes=django_web_components.attributes.AttributeBag(
                     {
                         "class": "font-bold",
                     }
@@ -1058,7 +839,7 @@ class RenderComponentTest(TestCase):
         self.assertEqual(
             component.render_component(
                 name="test",
-                attributes=component.AttributeBag(),
+                attributes=django_web_components.attributes.AttributeBag(),
                 slots={},
                 context=Context({}),
             ),
@@ -1079,7 +860,7 @@ class RenderComponentTest(TestCase):
         self.assertHTMLEqual(
             component.render_component(
                 name="test",
-                attributes=component.AttributeBag(
+                attributes=django_web_components.attributes.AttributeBag(
                     {
                         "class": "font-bold",
                     }
@@ -1109,52 +890,27 @@ class RenderComponentTest(TestCase):
         )
 
 
-class TokenKwargsTest(TestCase):
-    def test_parses_raw_value(self):
-        p = Parser([])
-        context = Context()
+class RegisterTest(TestCase):
+    def setUp(self) -> None:
+        component.registry.clear()
+
+    def test_call_register_as_decorator(self):
+        @component.register("hello")
+        def dummy(context):
+            pass
 
         self.assertEqual(
-            {key: value.resolve(context) for key, value in token_kwargs(['foo="bar"'], p).items()},
-            {
-                "foo": "bar",
-            },
+            component.registry.get("hello"),
+            dummy,
         )
 
-    def test_parses_key_with_symbols(self):
-        p = Parser([])
-        context = Context()
+    def test_call_register_directly(self):
+        def dummy(context):
+            pass
+
+        component.register("hello", dummy)
 
         self.assertEqual(
-            {
-                key: value.resolve(context)
-                for key, value in token_kwargs(['x-on:click="bar"', '@click="bar"', 'foo:bar.baz="bar"'], p).items()
-            },
-            {
-                "x-on:click": "bar",
-                "@click": "bar",
-                "foo:bar.baz": "bar",
-            },
+            component.registry.get("hello"),
+            dummy,
         )
-
-    def test_parses_variable_value(self):
-        p = Parser([])
-        context = Context({"bar": "baz"})
-
-        self.assertEqual(
-            {key: value.resolve(context) for key, value in token_kwargs(["foo=bar"], p).items()},
-            {
-                "foo": "baz",
-            },
-        )
-
-
-class SplitAttributesTest(TestCase):
-    def test_returns_normal_attrs(self):
-        self.assertEqual(split_attributes({"foo": "bar"}), ({}, {"foo": "bar"}))
-
-    def test_returns_special_attrs(self):
-        self.assertEqual(split_attributes({":let": "bar"}), ({":let": "bar"}, {}))
-
-    def test_splits_attrs(self):
-        self.assertEqual(split_attributes({":let": "fruit", "foo": "bar"}), ({":let": "fruit"}, {"foo": "bar"}))

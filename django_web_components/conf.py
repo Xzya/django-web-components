@@ -3,7 +3,7 @@ from django.conf import settings
 SETTINGS_KEY = "WEB_COMPONENTS"
 
 DEFAULT_SLOT_NAME = "inner_block"
-DEFAULT_COMPONENT_TAG_FORMATTER = "django_web_components.component.ComponentTagFormatter"
+DEFAULT_COMPONENT_TAG_FORMATTER = "django_web_components.tag_formatter.ComponentTagFormatter"
 
 
 class AppSettings:

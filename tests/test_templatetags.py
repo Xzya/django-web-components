@@ -3,7 +3,7 @@ from django.template.base import TextNode, FilterExpression, VariableNode
 from django.test import TestCase
 
 from django_web_components import component
-from django_web_components.component import AttributeBag
+from django_web_components.attributes import AttributeBag
 from django_web_components.conf import app_settings
 from django_web_components.templatetags.components import SlotNode, SlotNodeList, ComponentNode
 

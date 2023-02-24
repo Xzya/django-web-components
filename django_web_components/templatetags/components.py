@@ -8,15 +8,12 @@ from django.utils.regex_helper import _lazy_re_compile
 from django.utils.safestring import SafeString
 
 from django_web_components.component import (
-    AttributeBag,
-    token_kwargs,
     render_component,
     get_component_tag_formatter,
-    attributes_to_string,
-    merge_attributes,
-    split_attributes,
 )
+from django_web_components.attributes import AttributeBag, attributes_to_string, merge_attributes, split_attributes
 from django_web_components.conf import app_settings
+from django_web_components.utils import token_kwargs
 
 register = template.Library()
 
