@@ -894,7 +894,7 @@ class RegisterTest(TestCase):
     def setUp(self) -> None:
         component.registry.clear()
 
-    def test_call_register_as_decorator(self):
+    def test_called_as_decorator_with_name(self):
         @component.register("hello")
         def dummy(context):
             pass
@@ -904,7 +904,27 @@ class RegisterTest(TestCase):
             dummy,
         )
 
-    def test_call_register_directly(self):
+    def test_called_as_decorator_with_no_name(self):
+        @component.register()
+        def hello(context):
+            pass
+
+        self.assertEqual(
+            component.registry.get("hello"),
+            hello,
+        )
+
+    def test_called_as_decorator_with_no_parenthesis(self):
+        @component.register
+        def hello(context):
+            pass
+
+        self.assertEqual(
+            component.registry.get("hello"),
+            hello,
+        )
+
+    def test_called_directly_with_name(self):
         def dummy(context):
             pass
 
@@ -913,4 +933,15 @@ class RegisterTest(TestCase):
         self.assertEqual(
             component.registry.get("hello"),
             dummy,
+        )
+
+    def test_called_directly_with_no_name(self):
+        def hello(context):
+            pass
+
+        component.register(hello)
+
+        self.assertEqual(
+            component.registry.get("hello"),
+            hello,
         )
