@@ -1,6 +1,7 @@
 # django-web-components
 
 [![Tests](https://github.com/Xzya/django-web-components/actions/workflows/tests.yml/badge.svg)](https://github.com/Xzya/django-web-components/actions/workflows/tests.yml)
+[![PyPI](https://img.shields.io/pypi/v/django-web-components)](https://pypi.org/project/django-web-components/)
 
 A simple way to create reusable template components in Django.
 
