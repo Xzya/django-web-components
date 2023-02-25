@@ -878,3 +878,29 @@ Now you can run the tests
 ```bash
 python runtests.py
 ```
+
+## Motivation / Inspiration / Resources
+
+The project came to be after seeing how other languages / frameworks deal with components, and wanting to bring some of those ideas back to Django.
+
+- [django-components](https://github.com/EmilStenstrom/django-components) - The existing `django-components` library is already great and supports most of the features that this project has, but I thought the syntax could be improved a bit to feel less verbose, and add a few extra things that seemed necessary, like support for function based components and template strings, and working with attributes
+- [Phoenix Components](https://hexdocs.pm/phoenix_live_view/Phoenix.Component.html) - I really liked the simplicity of Phoenix and how they deal with components, and this project is heavily inspired by it. In fact, some of the examples above are straight-up copied from there (like the table example).
+- [Laravel Blade Components](https://laravel.com/docs/9.x/blade#components) - The initial implementation was actually very different and was relying on HTML parsing to turn the HTML into template Nodes, and was heavily inspired by Laravel. This had the benefit of having a nicer syntax (e.g. rendering the components looked a lot like normal HTML `<x-alert type="error">Server Error</x-alert>`), but the solution was a lot more complicated and I came to the conclusion that using a similar approach to `django-components` made a lot more sense in Django
+- [Vue Components](https://vuejs.org/guide/essentials/component-basics.html)
+- [slippers](https://github.com/mixxorz/slippers)
+- [django-widget-tweaks](https://github.com/jazzband/django-widget-tweaks)
+- [How EEx Turns Your Template Into HTML](https://www.mitchellhanberg.com/how-eex-turns-your-template-into-html/)
+
+### Component libraries
+
+Many other languages / frameworks are using the same concepts for building components (slots, attributes), so a lot of the knowledge is transferable, and there is already a great deal of existing component libraries out there (e.g. using Bootstrap, Tailwind, Material design, etc.). I highly recommend looking at some of them to get inspired on how to build / structure your components. Here are some examples:
+
+- https://bootstrap-vue.org/docs/components/alert
+- https://coreui.io/bootstrap-vue/components/alert.html
+- https://laravel-bootstrap-components.com/components/alerts
+- https://flowbite.com/docs/components/alerts/
+- https://www.creative-tim.com/vuematerial/components/button
+- https://phoenix-ui.fly.dev/components/alert
+- https://storybook.phenixgroupe.com/components/message
+- https://surface-ui.org/samplecomponents/Button
+- https://react-bootstrap.github.io/components/alerts/
