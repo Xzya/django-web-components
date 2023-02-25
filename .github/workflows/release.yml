@@ -1,0 +1,25 @@
+name: Release to PyPI
+
+on:
+  release:
+    types: [ published ]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+      - name: Install Poetry
+        run: |
+          pip install poetry
+      - name: Build the distribution
+        run: |
+          poetry build
+      - name: Publish distribution to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}
