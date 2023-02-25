@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "django-web-components"
-version = "0.0.1"
+version = "0.1.0"
 description = "Build reusable template components in Django"
 authors = ["Mihail Cristian Dumitru"]
 license = "MIT"
