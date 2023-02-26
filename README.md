@@ -169,7 +169,7 @@ A component may also be defined as a single function that accepts a `context` an
 from django_web_components import component
 from django_web_components.template import CachedTemplate
 
-@component.register("alert")
+@component.register
 def alert(context):
     return CachedTemplate(
         """
@@ -202,7 +202,7 @@ Regarding caching, the library provides a `CachedTemplate`, which will cache and
 from django_web_components import component
 from django_web_components.template import CachedTemplate
 
-@component.register("alert")
+@component.register
 def alert(context):
     return CachedTemplate(
         """
@@ -641,7 +641,7 @@ The slot content will also have access to the component's context. To explore th
 from django_web_components import component
 from django_web_components.template import CachedTemplate
 
-@component.register("unordered_list")
+@component.register
 def unordered_list(context):
     context["entries"] = context["attributes"].pop("entries", [])
 
@@ -710,7 +710,7 @@ Similar to the components, you may assign additional attributes to slots. Below 
 from django_web_components import component
 from django_web_components.template import CachedTemplate
 
-@component.register("table")
+@component.register
 def table(context):
     context["rows"] = context["attributes"].pop("rows", [])
 
@@ -778,7 +778,7 @@ from django_web_components import component
 from django_web_components.template import CachedTemplate
 import uuid
 
-@component.register("accordion")
+@component.register
 def accordion(context):
     context["accordion_id"] = context["attributes"].pop("id", str(uuid.uuid4()))
     context["always_open"] = context["attributes"].pop("always_open", False)
@@ -793,7 +793,7 @@ def accordion(context):
     ).render(context)
 
 
-@component.register("accordion_item")
+@component.register
 def accordion_item(context):
     context["id"] = context["attributes"].pop("id", str(uuid.uuid4()))
     context["open"] = context["attributes"].pop("open", False)
