@@ -20,6 +20,7 @@ classifiers = [
 packages = [{ include = "django_web_components" }]
 include = [
     "LICENSE",
+    "CHANGELOG.md",
 ]
 
 [tool.poetry.dependencies]
