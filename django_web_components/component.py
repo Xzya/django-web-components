@@ -73,7 +73,7 @@ def render_component(*, name: str, attributes: dict, slots: dict, context: templ
 registry = ComponentRegistry()
 
 
-def register(name: str, component=None, target_register: template.Library = None):
+def register(name=None, component=None, target_register: template.Library = None):
     """
     Register a component.
     """
@@ -85,17 +85,30 @@ def register(name: str, component=None, target_register: template.Library = None
     if target_register is None:
         target_register = tag_register
 
-    # called directly
-    # register("alert", Alert)
-    if component:
-        return _register(name=name, component=component, target_register=target_register)
-
-    # called as decorator
-    # @register("alert")
     def decorator(component):
+        return _register(name=component.__name__, component=component, target_register=target_register)
+
+    def decorator_with_custom_name(component):
         return _register(name=name, component=component, target_register=target_register)
 
-    return decorator
+    if name is None and component is None:
+        # @register()
+        return decorator
+
+    elif name is not None and component is None:
+        if callable(name):
+            # @register or register(alert)
+            return decorator(name)
+        else:
+            # @register("alert") or @register(name="alert")
+            return decorator_with_custom_name
+
+    elif name is not None and component is not None:
+        # register("alert", alert)
+        return _register(name=name, component=component, target_register=target_register)
+
+    else:
+        raise ValueError("Unsupported arguments to component.register: (%r, %r)" % (name, component))
 
 
 def _register(name: str, component, target_register: template.Library):
