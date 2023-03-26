@@ -44,7 +44,13 @@ class AttributesToStringTest(TestCase):
     def test_attribute_with_no_value(self):
         self.assertEqual(
             attributes_to_string({"required": None}),
-            "required",
+            "",
+        )
+
+    def test_attribute_with_false_value(self):
+        self.assertEqual(
+            attributes_to_string({"required": False}),
+            "",
         )
 
     def test_attribute_with_true_value(self):

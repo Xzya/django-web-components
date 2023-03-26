@@ -19,10 +19,12 @@ def attributes_to_string(attributes: dict) -> str:
     attr_list = []
 
     for key, value in attributes.items():
-        if value is not None and value is not True:
-            attr_list.append(format_html('{}="{}"', key, value))
-        else:
+        if value is None or value is False:
+            continue
+        if value is True:
             attr_list.append(conditional_escape(key))
+        else:
+            attr_list.append(format_html('{}="{}"', key, value))
 
     return mark_safe(SafeString(" ").join(attr_list))
 
