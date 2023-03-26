@@ -1,6 +1,8 @@
 # Changelog
 
 ## [Unreleased]
+
+## [0.2.0] - 2023-03-27
 - Updated the `django_web_components.attributes.merge_attributes` function to make it easier to work with attributes, especially classes
   - The signature was changed to accept a list of dicts
   - `merge_attributes` no longer appends attributes, instead, there is a separate `append_attributes` function for that now
