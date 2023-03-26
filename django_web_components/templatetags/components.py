@@ -7,11 +7,17 @@ from django.template.base import FilterExpression, Token, Parser
 from django.utils.regex_helper import _lazy_re_compile
 from django.utils.safestring import SafeString
 
+from django_web_components.attributes import (
+    AttributeBag,
+    attributes_to_string,
+    merge_attributes,
+    split_attributes,
+    append_attributes,
+)
 from django_web_components.component import (
     render_component,
     get_component_tag_formatter,
 )
-from django_web_components.attributes import AttributeBag, attributes_to_string, merge_attributes, split_attributes
 from django_web_components.conf import app_settings
 from django_web_components.utils import token_kwargs
 
@@ -307,14 +313,14 @@ class MergeAttrsNode(template.Node):
     def render(self, context):
         bound_attributes: dict = self.attributes.resolve(context)
 
-        attribute_defaults = {key: value.resolve(context) for key, value in self.default_attrs}
+        default_attrs = {key: value.resolve(context) for key, value in self.default_attrs}
 
-        append_attributes = {key: value.resolve(context) for key, value in self.append_attrs}
+        append_attrs = {key: value.resolve(context) for key, value in self.append_attrs}
 
         attrs = merge_attributes(
-            attributes=bound_attributes,
-            attribute_defaults=attribute_defaults,
-            append_attributes=append_attributes,
+            default_attrs,
+            bound_attributes,
         )
+        attrs = append_attributes(attrs, append_attrs)
 
         return attributes_to_string(attrs)
