@@ -76,6 +76,7 @@ def create_component_tag(component_name: str):
             name=component_name,
             unresolved_attributes=attrs,
             slots=slots,
+            special=special,
         )
 
     return do_component
@@ -85,13 +86,22 @@ class ComponentNode(template.Node):
     name: str
     unresolved_attributes: dict
     slots: dict
+    special: dict
 
-    def __init__(self, name: str = None, unresolved_attributes: dict = None, slots: dict = None):
+    def __init__(self, name: str = None, unresolved_attributes: dict = None, slots: dict = None, special: dict = None):
         self.name = name or ""
         self.unresolved_attributes = unresolved_attributes or {}
         self.slots = slots or {}
+        self.special = special or {}
 
     def render(self, context):
+        # handle :if directive
+        if_expr = self.special.get(":if", None)
+        if if_expr:
+            if_expr = if_expr.resolve(context, ignore_failures=True)
+            if not if_expr:
+                return ""
+
         # We may need to access the slot's attributes inside the component's template,
         # so we need to resolve them
         #
@@ -236,6 +246,14 @@ class RenderSlotNode(template.Node):
 
     def render_slot(self, slot, argument, context):
         if isinstance(slot, SlotNode):
+            # handle :if directive
+            if_expr = slot.special.get(":if", None)
+            if if_expr:
+                if_expr = if_expr.resolve(context, ignore_failures=True)
+                if not if_expr:
+                    return ""
+
+            # handle :let directive
             let = slot.special.get(":let", None)
             if let:
                 let = let.resolve(context, ignore_failures=True)

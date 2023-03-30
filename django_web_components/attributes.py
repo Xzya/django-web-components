@@ -106,7 +106,7 @@ def split_attributes(attributes: dict) -> Tuple[dict, dict]:
     """
     Splits the given attributes into "special" attributes (like :let) and normal attributes.
     """
-    special_attrs = (":let",)
+    special_attrs = (":let", ":if")
 
     attrs = {}
     special = {}

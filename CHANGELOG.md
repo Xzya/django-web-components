@@ -1,6 +1,13 @@
 # Changelog
 
 ## [Unreleased]
+- Added support for the `:if` directive to conditionally render components and slots
+
+```html
+{% alert :if=error %}
+    {{ error }}
+{% endalert %}
+```
 
 ## [0.2.0] - 2023-03-27
 - Updated the `django_web_components.attributes.merge_attributes` function to make it easier to work with attributes, especially classes

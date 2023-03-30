@@ -732,6 +732,150 @@ class ExampleComponentsTest(TestCase):
             """,
         )
 
+    # :if directive
+
+    def test_component_if_directive(self):
+        @component.register("hello")
+        def dummy(context):
+            return Template(
+                """
+                <div {{ attributes }}>{% render_slot slots.inner_block %}</div>
+                """
+            ).render(context)
+
+        # true literal
+        self.assertHTMLEqual(
+            Template(
+                """
+                {% hello :if=True %}
+                    Hello, world!
+                {% endhello %}
+                """
+            ).render(Context({})),
+            """
+            <div>
+                Hello, world!
+            </div>
+            """,
+        )
+
+        # false literal
+        self.assertHTMLEqual(
+            Template(
+                """
+                {% hello :if=False %}
+                    Hello, world!
+                {% endhello %}
+                """
+            ).render(Context({})),
+            """
+            """,
+        )
+
+        # true variable
+        self.assertHTMLEqual(
+            Template(
+                """
+                {% hello :if=foo.show %}
+                    Hello, world!
+                {% endhello %}
+                """
+            ).render(Context({"foo": {"show": True}})),
+            """
+            <div>
+                Hello, world!
+            </div>
+            """,
+        )
+
+        # false variable
+        self.assertHTMLEqual(
+            Template(
+                """
+                {% hello :if=foo.show %}
+                    Hello, world!
+                {% endhello %}
+                """
+            ).render(Context({"foo": {"show": False}})),
+            """
+            """,
+        )
+
+    def test_slot_if_directive(self):
+        @component.register("hello")
+        def dummy(context):
+            return Template(
+                """
+                <div>
+                    <div {{ slots.title.attributes }}>{% render_slot slots.title %}</div>
+                </div>
+                """
+            ).render(context)
+
+        # true literal
+        self.assertHTMLEqual(
+            Template(
+                """
+                {% hello %}
+                    {% slot title :if=True %}Title{% endslot %}
+                {% endhello %}
+                """
+            ).render(Context({})),
+            """
+            <div>
+                <div>Title</div>
+            </div>
+            """,
+        )
+
+        # false literal
+        self.assertHTMLEqual(
+            Template(
+                """
+                {% hello %}
+                    {% slot title :if=False %}Title{% endslot %}
+                {% endhello %}
+                """
+            ).render(Context({})),
+            """
+            <div>
+                <div></div>
+            </div>
+            """,
+        )
+
+        # true variable
+        self.assertHTMLEqual(
+            Template(
+                """
+                {% hello %}
+                    {% slot title :if=foo.show %}Title{% endslot %}
+                {% endhello %}
+                """
+            ).render(Context({"foo": {"show": True}})),
+            """
+            <div>
+                <div>Title</div>
+            </div>
+            """,
+        )
+
+        # false variable
+        self.assertHTMLEqual(
+            Template(
+                """
+                {% hello %}
+                    {% slot title :if=foo.show %}Title{% endslot %}
+                {% endhello %}
+                """
+            ).render(Context({"foo": {"show": False}})),
+            """
+            <div>
+                <div></div>
+            </div>
+            """,
+        )
+
     # Settings
 
     def test_can_change_default_slot_name_from_settings(self):
