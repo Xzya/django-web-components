@@ -105,8 +105,17 @@ class SplitAttributesTest(TestCase):
     def test_returns_normal_attrs(self):
         self.assertEqual(split_attributes({"foo": "bar"}), ({}, {"foo": "bar"}))
 
-    def test_returns_special_attrs(self):
-        self.assertEqual(split_attributes({":let": "bar"}), ({":let": "bar"}, {}))
+    def test_returns_special_attr_let(self):
+        self.assertEqual(
+            split_attributes({":let": "bar"}),
+            ({":let": "bar"}, {}),
+        )
+
+    def test_returns_special_attr_if(self):
+        self.assertEqual(
+            split_attributes({":if": True}),
+            ({":if": True}, {}),
+        )
 
     def test_splits_attrs(self):
         self.assertEqual(split_attributes({":let": "fruit", "foo": "bar"}), ({":let": "fruit"}, {"foo": "bar"}))
